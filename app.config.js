@@ -26,6 +26,8 @@ export default {
     },
 
     extra: {
+      supabaseUrl: "https://TU-PROJECT.supabase.co",
+      supabaseAnonKey: "TU-ANON-KEY",
       eas: {
         projectId: "0062dc03-d32e-4eb2-9678-295e8a01e762"
       }

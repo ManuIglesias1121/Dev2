@@ -12,13 +12,10 @@ import {
 import { AuthContext } from "../contexts/AuthContext";
 
 export default function RegisterPage() {
-  const { signUp, goToLogin } = useContext(AuthContext);
+  const { login, updateUser } = useContext(AuthContext);
 
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [confirm, setConfirm] = useState("");
+  const [name, setName] = useState("");
 
-  // Animación suave
   const fadeAnim = new Animated.Value(0);
   useEffect(() => {
     Animated.timing(fadeAnim, {
@@ -28,13 +25,21 @@ export default function RegisterPage() {
     }).start();
   }, []);
 
+  const handleRegister = () => {
+    updateUser({
+      display_name: name || "Usuario",
+      biography: "Nuevo miembro de la manada.",
+    });
+
+    login();
+  };
+
   return (
     <KeyboardAvoidingView
       style={{ flex: 1, backgroundColor: "black" }}
       behavior={Platform.OS === "ios" ? "padding" : undefined}
     >
       <Animated.View style={{ flex: 1, opacity: fadeAnim }}>
-        {/* HEADER */}
         <LinearGradient
           colors={["#0f0f0f", "#1a1a1a", "#000"]}
           style={{
@@ -63,49 +68,12 @@ export default function RegisterPage() {
           </Text>
         </LinearGradient>
 
-        {/* FORM */}
         <View style={{ padding: 25 }}>
           <TextInput
-            placeholder="Correo electrónico"
+            placeholder="Tu nombre"
             placeholderTextColor="#666"
-            value={email}
-            onChangeText={setEmail}
-            autoCapitalize="none"
-            keyboardType="email-address"
-            style={{
-              backgroundColor: "#111",
-              color: "white",
-              padding: 14,
-              borderRadius: 10,
-              marginBottom: 15,
-              borderWidth: 1,
-              borderColor: "#222",
-            }}
-          />
-
-          <TextInput
-            placeholder="Contraseña"
-            placeholderTextColor="#666"
-            secureTextEntry
-            value={password}
-            onChangeText={setPassword}
-            style={{
-              backgroundColor: "#111",
-              color: "white",
-              padding: 14,
-              borderRadius: 10,
-              marginBottom: 15,
-              borderWidth: 1,
-              borderColor: "#222",
-            }}
-          />
-
-          <TextInput
-            placeholder="Confirmar contraseña"
-            placeholderTextColor="#666"
-            secureTextEntry
-            value={confirm}
-            onChangeText={setConfirm}
+            value={name}
+            onChangeText={setName}
             style={{
               backgroundColor: "#111",
               color: "white",
@@ -117,7 +85,6 @@ export default function RegisterPage() {
             }}
           />
 
-          {/* BOTÓN REGISTRAR */}
           <TouchableOpacity
             style={{
               backgroundColor: "#22c55e",
@@ -125,7 +92,7 @@ export default function RegisterPage() {
               borderRadius: 10,
               marginBottom: 15,
             }}
-            onPress={() => signUp(email, password, confirm)}
+            onPress={handleRegister}
           >
             <Text
               style={{
@@ -139,8 +106,7 @@ export default function RegisterPage() {
             </Text>
           </TouchableOpacity>
 
-          {/* VOLVER AL LOGIN */}
-          <TouchableOpacity onPress={goToLogin}>
+          <TouchableOpacity onPress={login}>
             <Text
               style={{
                 color: "#22c55e",
@@ -149,7 +115,7 @@ export default function RegisterPage() {
                 marginTop: 10,
               }}
             >
-              ¿Ya tienes cuenta? Inicia sesión
+              ¿Ya tienes cuenta? Entrar
             </Text>
           </TouchableOpacity>
         </View>

@@ -1,104 +1,22 @@
 import { useNavigation } from "@react-navigation/native";
-import { useContext, useEffect, useState } from "react";
+import React, { useState } from "react";
 import {
-  ActivityIndicator,
   Image,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
 } from "react-native";
-import { AuthContext } from "../contexts/AuthContext";
-import { supabase } from "../lib/supabase";
+import { useAuth } from "../contexts/AuthContext";
+import { fakeVisitors } from "../data/fakeVisitors";
 
 export default function VisitorsPage() {
-  const { selectedProfile: profile } = useContext(AuthContext);
   const navigation = useNavigation();
+  const { user } = useAuth();
 
-  const [visitors, setVisitors] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [visitors] = useState(fakeVisitors);
 
-  const getOrCreateChat = async (otherUserId) => {
-    if (!profile) return null;
-
-    const myId = profile.user_id;
-
-    const { data: existing } = await supabase
-      .from("chats")
-      .select("*")
-      .or(
-        `and(user1_id.eq.${myId},user2_id.eq.${otherUserId}),
-         and(user1_id.eq.${otherUserId},user2_id.eq.${myId})`
-      )
-      .limit(1);
-
-    if (existing && existing.length > 0) {
-      return existing[0].id;
-    }
-
-    const { data: created, error } = await supabase
-      .from("chats")
-      .insert({
-        user1_id: myId,
-        user2_id: otherUserId,
-      })
-      .select()
-      .single();
-
-    if (error) {
-      console.log("Error creando chat:", error);
-      return null;
-    }
-
-    return created.id;
-  };
-
-  const loadVisitors = async () => {
-    if (!profile) {
-      setLoading(false);
-      return;
-    }
-
-    if (!profile.is_premium) {
-      setLoading(false);
-      return;
-    }
-
-    const { data: visits } = await supabase
-      .from("profile_visits")
-      .select("visitor_id, created_at")
-      .eq("visited_id", profile.user_id)
-      .order("created_at", { ascending: false });
-
-    if (!visits) {
-      setLoading(false);
-      return;
-    }
-
-    const visitorIds = visits.map((v) => v.visitor_id);
-
-    const { data: profilesData } = await supabase
-      .from("therian_profiles")
-      .select("*")
-      .in("user_id", visitorIds);
-
-    setVisitors(profilesData || []);
-    setLoading(false);
-  };
-
-  useEffect(() => {
-    loadVisitors();
-  }, []);
-
-  if (loading) {
-    return (
-      <View style={styles.center}>
-        <ActivityIndicator size="large" color="#22c55e" />
-      </View>
-    );
-  }
-
-  if (!profile?.is_premium) {
+  if (!user?.isPremium) {
     return (
       <View style={styles.center}>
         <Text style={styles.locked}>🔒 Solo para usuarios Premium</Text>
@@ -117,21 +35,16 @@ export default function VisitorsPage() {
         <TouchableOpacity
           key={v.id}
           style={styles.card}
-          onPress={async () => {
-            const chatId = await getOrCreateChat(v.user_id);
-            if (!chatId) return;
-
-            // ⚠️ ChatRoom debe existir en tu navegación
-            navigation.navigate("ChatRoom", {
-              chatId,
+          onPress={() =>
+            navigation.navigate("ChatRoomPage", {
+              chatId: v.id,
               name: v.display_name,
-              photo: v.avatar_url,
-            });
-          }}
+              photo: v.avatar,
+            })
+          }
         >
-          {v.avatar_url && (
-            <Image source={{ uri: v.avatar_url }} style={styles.avatar} />
-          )}
+          <Image source={{ uri: v.avatar }} style={styles.avatar} />
+
           <Text style={styles.name}>{v.display_name}</Text>
           <Text style={styles.info}>{v.primary_theriotype}</Text>
         </TouchableOpacity>

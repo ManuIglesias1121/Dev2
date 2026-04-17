@@ -1,0 +1,353 @@
+import React, { useEffect, useState, useMemo, useRef } from "react";
+import {
+  ActivityIndicator,
+  Animated,
+  FlatList,
+  Modal,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from "react-native";
+import { Ionicons } from "@expo/vector-icons";
+import { LinearGradient } from "expo-linear-gradient";
+import { useNavigation } from "@react-navigation/native";
+import SwipeCard from "../components/SwipeCard";
+import { getTherianProfiles } from "../services/profilesService";
+import { useAuth } from "../contexts/AuthContext";
+
+const THERIOTYPES_OPTIONS = [
+  "Wolf", "Fox", "Crow", "Serpent", "Panther", "Tiger",
+  "Owl", "Coyote", "Lynx", "Dragon", "Deer", "Bear",
+];
+
+const DEFAULT_FILTERS = {
+  ageMin: 18,
+  ageMax: 45,
+  maxDistance: 100,
+  theriotypes: [],
+  onlyPremium: false,
+  gender: "all",
+};
+
+export default function SwipePage() {
+  const [profiles, setProfiles] = useState([]);
+  const [index, setIndex] = useState(0);
+  const [loading, setLoading] = useState(true);
+  const [showFilters, setShowFilters] = useState(false);
+  const [filters, setFilters] = useState(DEFAULT_FILTERS);
+  const [pendingFilters, setPendingFilters] = useState(DEFAULT_FILTERS);
+  const [noMoreVisible, setNoMoreVisible] = useState(false);
+  const navigation = useNavigation();
+  const { user, swipeProfile } = useAuth();
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    async function load() {
+      const data = await getTherianProfiles();
+      setProfiles(data);
+      setLoading(false);
+      Animated.timing(fadeAnim, { toValue: 1, duration: 500, useNativeDriver: true }).start();
+    }
+    load();
+  }, []);
+
+  const filtered = useMemo(() => {
+    return profiles.filter((p) => {
+      if (p.age < filters.ageMin || p.age > filters.ageMax) return false;
+      if (p.distance > filters.maxDistance) return false;
+      if (filters.onlyPremium && !p.isPremium) return false;
+      if (filters.gender !== "all" && p.gender !== filters.gender) return false;
+      if (filters.theriotypes.length > 0 && !filters.theriotypes.includes(p.primary_theriotype)) return false;
+      return true;
+    });
+  }, [profiles, filters]);
+
+  const current = filtered[index];
+  const filtersActive =
+    filters.ageMin !== DEFAULT_FILTERS.ageMin ||
+    filters.ageMax !== DEFAULT_FILTERS.ageMax ||
+    filters.maxDistance !== DEFAULT_FILTERS.maxDistance ||
+    filters.theriotypes.length > 0 ||
+    filters.onlyPremium ||
+    filters.gender !== "all";
+
+  const handleSwipe = () => {
+    swipeProfile?.();
+    if (index >= filtered.length - 1) {
+      setNoMoreVisible(true);
+    } else {
+      setIndex((i) => i + 1);
+      setNoMoreVisible(false);
+    }
+  };
+
+  const applyFilters = () => {
+    setFilters({ ...pendingFilters });
+    setIndex(0);
+    setNoMoreVisible(false);
+    setShowFilters(false);
+  };
+
+  const resetFilters = () => {
+    setPendingFilters(DEFAULT_FILTERS);
+  };
+
+  const toggleTheriotype = (t) => {
+    setPendingFilters((prev) => ({
+      ...prev,
+      theriotypes: prev.theriotypes.includes(t)
+        ? prev.theriotypes.filter((x) => x !== t)
+        : [...prev.theriotypes, t],
+    }));
+  };
+
+  if (loading) {
+    return (
+      <View style={styles.center}>
+        <ActivityIndicator size="large" color="#22c55e" />
+      </View>
+    );
+  }
+
+  return (
+    <View style={styles.container}>
+      {/* HEADER */}
+      <View style={styles.header}>
+        <Text style={styles.logo}>🐾 TherianMatch</Text>
+        <TouchableOpacity onPress={() => { setPendingFilters(filters); setShowFilters(true); }} style={styles.filterBtn}>
+          <Ionicons name="options-outline" size={22} color={filtersActive ? "#22c55e" : "white"} />
+          {filtersActive && <View style={styles.filterDot} />}
+        </TouchableOpacity>
+      </View>
+
+      {/* SWIPE AREA */}
+      {!noMoreVisible && current ? (
+        <Animated.View style={{ flex: 1, opacity: fadeAnim }}>
+          <SwipeCard
+            profile={current}
+            onNope={handleSwipe}
+            onLike={handleSwipe}
+            onSuper={handleSwipe}
+            onOpenGallery={() => navigation.navigate("GalleryPage", { photos: current.photos })}
+            onOpenProfile={() => navigation.navigate("ProfileDetail", { profile: current })}
+          />
+        </Animated.View>
+      ) : (
+        <View style={styles.center}>
+          <Text style={{ fontSize: 48 }}>🐾</Text>
+          <Text style={{ color: "white", fontSize: 20, fontWeight: "bold", marginTop: 16 }}>
+            {noMoreVisible ? "¡Ya viste todos!" : "Sin resultados"}
+          </Text>
+          <Text style={{ color: "#666", marginTop: 8, textAlign: "center", paddingHorizontal: 40 }}>
+            {noMoreVisible
+              ? "Volvé más tarde o ampliá los filtros"
+              : "Ningún perfil coincide con tus filtros"}
+          </Text>
+          {filtersActive && (
+            <TouchableOpacity
+              onPress={() => { setFilters(DEFAULT_FILTERS); setIndex(0); setNoMoreVisible(false); }}
+              style={{ marginTop: 20, backgroundColor: "#16a34a", paddingHorizontal: 24, paddingVertical: 12, borderRadius: 24 }}
+            >
+              <Text style={{ color: "white", fontWeight: "bold" }}>Quitar filtros</Text>
+            </TouchableOpacity>
+          )}
+        </View>
+      )}
+
+      {/* SWIPES COUNTER */}
+      {user && (
+        <View style={styles.swipesBar}>
+          <Text style={{ color: "#666", fontSize: 13 }}>
+            {filtered.length - index > 0 ? `${filtered.length - index} perfiles` : "Sin más perfiles"} •{" "}
+            <Text style={{ color: user.swipesLeft > 0 ? "#22c55e" : "#ef4444" }}>
+              {user.swipesLeft ?? 0} swipes restantes hoy
+            </Text>
+          </Text>
+        </View>
+      )}
+
+      {/* MODAL FILTROS */}
+      <Modal visible={showFilters} transparent animationType="slide">
+        <View style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.85)", justifyContent: "flex-end" }}>
+          <View style={styles.filterSheet}>
+            {/* Handle */}
+            <View style={{ width: 40, height: 4, backgroundColor: "#333", borderRadius: 2, alignSelf: "center", marginBottom: 16 }} />
+
+            <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
+              <Text style={{ color: "white", fontSize: 20, fontWeight: "bold" }}>Filtros</Text>
+              <TouchableOpacity onPress={resetFilters}>
+                <Text style={{ color: "#22c55e", fontSize: 15 }}>Resetear</Text>
+              </TouchableOpacity>
+            </View>
+
+            <ScrollView showsVerticalScrollIndicator={false}>
+              {/* EDAD */}
+              <FilterSection title="Rango de edad">
+                <View style={{ flexDirection: "row", gap: 12 }}>
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.filterLabel}>Mínima: {pendingFilters.ageMin}</Text>
+                    <View style={{ flexDirection: "row", gap: 8, marginTop: 8, flexWrap: "wrap" }}>
+                      {[18, 20, 22, 25, 28, 30].map((v) => (
+                        <TouchableOpacity key={v} onPress={() => setPendingFilters((p) => ({ ...p, ageMin: v }))} style={[styles.chip, pendingFilters.ageMin === v && styles.chipActive]}>
+                          <Text style={{ color: pendingFilters.ageMin === v ? "#22c55e" : "#aaa", fontSize: 13 }}>{v}</Text>
+                        </TouchableOpacity>
+                      ))}
+                    </View>
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.filterLabel}>Máxima: {pendingFilters.ageMax}</Text>
+                    <View style={{ flexDirection: "row", gap: 8, marginTop: 8, flexWrap: "wrap" }}>
+                      {[25, 30, 35, 40, 45, 50].map((v) => (
+                        <TouchableOpacity key={v} onPress={() => setPendingFilters((p) => ({ ...p, ageMax: v }))} style={[styles.chip, pendingFilters.ageMax === v && styles.chipActive]}>
+                          <Text style={{ color: pendingFilters.ageMax === v ? "#22c55e" : "#aaa", fontSize: 13 }}>{v}</Text>
+                        </TouchableOpacity>
+                      ))}
+                    </View>
+                  </View>
+                </View>
+              </FilterSection>
+
+              {/* DISTANCIA */}
+              <FilterSection title={`Distancia máxima: ${pendingFilters.maxDistance} km`}>
+                <View style={{ flexDirection: "row", gap: 8, flexWrap: "wrap" }}>
+                  {[5, 10, 25, 50, 100, 500].map((v) => (
+                    <TouchableOpacity key={v} onPress={() => setPendingFilters((p) => ({ ...p, maxDistance: v }))} style={[styles.chip, pendingFilters.maxDistance === v && styles.chipActive]}>
+                      <Text style={{ color: pendingFilters.maxDistance === v ? "#22c55e" : "#aaa", fontSize: 13 }}>{v} km</Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              </FilterSection>
+
+              {/* GÉNERO */}
+              <FilterSection title="Mostrar">
+                <View style={{ flexDirection: "row", gap: 10 }}>
+                  {[["all", "Todos"], ["F", "Femenino"], ["M", "Masculino"]].map(([val, label]) => (
+                    <TouchableOpacity key={val} onPress={() => setPendingFilters((p) => ({ ...p, gender: val }))} style={[styles.chip, pendingFilters.gender === val && styles.chipActive, { flex: 1, justifyContent: "center" }]}>
+                      <Text style={{ color: pendingFilters.gender === val ? "#22c55e" : "#aaa", textAlign: "center", fontSize: 14 }}>{label}</Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              </FilterSection>
+
+              {/* THERIOTYPE */}
+              <FilterSection title="Theriotype">
+                <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
+                  {THERIOTYPES_OPTIONS.map((t) => {
+                    const active = pendingFilters.theriotypes.includes(t);
+                    return (
+                      <TouchableOpacity key={t} onPress={() => toggleTheriotype(t)} style={[styles.chip, active && styles.chipActive]}>
+                        <Text style={{ color: active ? "#22c55e" : "#aaa", fontSize: 13 }}>{t}</Text>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </View>
+              </FilterSection>
+
+              {/* PREMIUM */}
+              <FilterSection title="Otros">
+                <TouchableOpacity
+                  onPress={() => setPendingFilters((p) => ({ ...p, onlyPremium: !p.onlyPremium }))}
+                  style={{ flexDirection: "row", alignItems: "center", gap: 12 }}
+                >
+                  <View style={[styles.checkbox, pendingFilters.onlyPremium && styles.checkboxActive]}>
+                    {pendingFilters.onlyPremium && <Ionicons name="checkmark" size={14} color="white" />}
+                  </View>
+                  <Text style={{ color: "white", fontSize: 15 }}>Solo perfiles premium 👑</Text>
+                </TouchableOpacity>
+              </FilterSection>
+            </ScrollView>
+
+            <View style={{ flexDirection: "row", gap: 12, marginTop: 20 }}>
+              <TouchableOpacity onPress={() => setShowFilters(false)} style={[styles.filterAction, { flex: 1, backgroundColor: "#1a1a1a" }]}>
+                <Text style={{ color: "#aaa", fontSize: 16, textAlign: "center" }}>Cancelar</Text>
+              </TouchableOpacity>
+              <TouchableOpacity onPress={applyFilters} style={[styles.filterAction, { flex: 2, backgroundColor: "#16a34a" }]}>
+                <Text style={{ color: "white", fontSize: 16, fontWeight: "bold", textAlign: "center" }}>Aplicar filtros</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+    </View>
+  );
+}
+
+function FilterSection({ title, children }) {
+  return (
+    <View style={{ marginBottom: 20 }}>
+      <Text style={styles.filterSectionTitle}>{title}</Text>
+      {children}
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: { flex: 1, backgroundColor: "#000" },
+  center: { flex: 1, justifyContent: "center", alignItems: "center" },
+  header: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingHorizontal: 20,
+    paddingTop: 56,
+    paddingBottom: 12,
+    backgroundColor: "#000",
+  },
+  logo: { color: "white", fontSize: 20, fontWeight: "bold" },
+  filterBtn: { padding: 8, position: "relative" },
+  filterDot: {
+    position: "absolute", top: 6, right: 6,
+    width: 8, height: 8, borderRadius: 4, backgroundColor: "#22c55e",
+  },
+  swipesBar: {
+    padding: 12,
+    alignItems: "center",
+    borderTopWidth: 1,
+    borderColor: "#111",
+  },
+  filterSheet: {
+    backgroundColor: "#0f0f0f",
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    padding: 24,
+    maxHeight: "85%",
+    borderTopWidth: 1,
+    borderColor: "#1e1e1e",
+  },
+  filterSectionTitle: {
+    color: "#888",
+    fontSize: 13,
+    fontWeight: "700",
+    textTransform: "uppercase",
+    letterSpacing: 0.5,
+    marginBottom: 10,
+  },
+  filterLabel: { color: "#aaa", fontSize: 14 },
+  chip: {
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: "#333",
+    backgroundColor: "#1a1a1a",
+  },
+  chipActive: {
+    borderColor: "#22c55e",
+    backgroundColor: "#0f2d0f",
+  },
+  checkbox: {
+    width: 22, height: 22, borderRadius: 6,
+    borderWidth: 2, borderColor: "#444",
+    justifyContent: "center", alignItems: "center",
+  },
+  checkboxActive: {
+    backgroundColor: "#16a34a",
+    borderColor: "#22c55e",
+  },
+  filterAction: {
+    padding: 14,
+    borderRadius: 14,
+  },
+});

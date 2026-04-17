@@ -1,6 +1,6 @@
 import { LinearGradient } from "expo-linear-gradient";
 import React, { useEffect, useRef } from "react";
-import { Animated, Text } from "react-native";
+import { Animated, Image, Text } from "react-native";
 
 export default function SplashScreen({ onFinish }) {
   const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -20,10 +20,16 @@ export default function SplashScreen({ onFinish }) {
       colors={["#000", "#0a0a0a", "#000"]}
       style={{ flex: 1, justifyContent: "center", alignItems: "center" }}
     >
-      <Animated.View style={{ opacity: fadeAnim }}>
-        <Text style={{ fontSize: 80, color: "#22c55e", textAlign: "center" }}>
-          🐾
-        </Text>
+      <Animated.View style={{ opacity: fadeAnim, alignItems: "center" }}>
+        <Image
+          source={require("../../assets/logo1.png")}
+          style={{
+            width: 180,
+            height: 180,
+            resizeMode: "contain",
+          }}
+        />
+
         <Text
           style={{
             color: "white",

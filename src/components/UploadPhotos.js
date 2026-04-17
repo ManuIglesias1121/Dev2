@@ -9,7 +9,6 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import { supabase } from "../lib/supabase";
 
 export default function UploadPhotos({
   userId,
@@ -25,47 +24,25 @@ export default function UploadPhotos({
       return;
     }
 
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      quality: 0.8,
-    });
-
-    if (!result.canceled) {
-      uploadImage(result.assets[0].uri);
-    }
-  };
-
-  const uploadImage = async (uri) => {
     try {
       setUploading(true);
 
-      const ext = uri.split(".").pop() || "jpg";
-      const fileName = `${userId}-${Date.now()}.${ext}`;
-      const filePath = `photos/${fileName}`;
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        quality: 0.8,
+      });
 
-      const response = await fetch(uri);
-      const blob = await response.blob();
+      if (!result.canceled) {
+        const uri = result.assets[0].uri;
 
-      const { error } = await supabase.storage
-        .from("avatares")
-        .upload(filePath, blob, { upsert: true });
+        // Guardamos la foto localmente
+        const newPhotos = [...currentPhotos, uri];
 
-      if (error) throw error;
-
-      const { data } = supabase.storage
-        .from("avatares")
-        .getPublicUrl(filePath);
-
-      const newPhotos = [...currentPhotos, data.publicUrl];
-
-      await supabase
-        .from("therian_profiles")
-        .update({ photos: newPhotos })
-        .eq("user_id", userId);
-
-      onUpdated(newPhotos);
+        // Devolvemos la nueva lista al componente padre
+        onUpdated(newPhotos);
+      }
     } catch (e) {
-      Alert.alert("Error", "No se pudo subir la foto");
+      Alert.alert("Error", "No se pudo seleccionar la foto");
     } finally {
       setUploading(false);
     }

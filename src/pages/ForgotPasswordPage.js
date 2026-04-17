@@ -1,19 +1,16 @@
 import { LinearGradient } from "expo-linear-gradient";
-import React, { useContext, useEffect, useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
-    Animated,
-    KeyboardAvoidingView,
-    Platform,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  Animated,
+  KeyboardAvoidingView,
+  Platform,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from "react-native";
-import { AuthContext } from "../contexts/AuthContext";
 
-export default function ForgotPasswordPage() {
-  const { resetPassword, goToLogin } = useContext(AuthContext);
-
+export default function ForgotPasswordPage({ navigation }) {
   const [email, setEmail] = useState("");
 
   const fadeAnim = new Animated.Value(0);
@@ -24,6 +21,11 @@ export default function ForgotPasswordPage() {
       useNativeDriver: true,
     }).start();
   }, []);
+
+  const handleFakeReset = () => {
+    alert("En una versión con backend, recibirías un correo aquí.");
+    navigation.goBack();
+  };
 
   return (
     <KeyboardAvoidingView
@@ -55,7 +57,7 @@ export default function ForgotPasswordPage() {
           </Text>
 
           <Text style={{ color: "#888", marginTop: 5 }}>
-            Te enviaremos un correo
+            (Función no disponible sin backend)
           </Text>
         </LinearGradient>
 
@@ -85,7 +87,7 @@ export default function ForgotPasswordPage() {
               borderRadius: 10,
               marginBottom: 15,
             }}
-            onPress={() => resetPassword(email)}
+            onPress={handleFakeReset}
           >
             <Text
               style={{
@@ -99,7 +101,7 @@ export default function ForgotPasswordPage() {
             </Text>
           </TouchableOpacity>
 
-          <TouchableOpacity onPress={goToLogin}>
+          <TouchableOpacity onPress={() => navigation.goBack()}>
             <Text
               style={{
                 color: "#22c55e",

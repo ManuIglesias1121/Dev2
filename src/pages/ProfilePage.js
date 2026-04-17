@@ -2,17 +2,17 @@ import { LinearGradient } from "expo-linear-gradient";
 import { useContext, useEffect, useRef } from "react";
 import {
   Animated,
+  Image,
   ScrollView,
   Text,
   TouchableOpacity,
-  View
+  View,
 } from "react-native";
 import { AuthContext } from "../contexts/AuthContext";
 
-export default function ProfilePage() {
-  const { selectedProfile: profile, setScreen } = useContext(AuthContext);
+export default function ProfilePage({ navigation }) {
+  const { user, logout } = useContext(AuthContext);
 
-  // Animación suave de entrada (CORREGIDA)
   const fadeAnim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
@@ -22,6 +22,24 @@ export default function ProfilePage() {
       useNativeDriver: true,
     }).start();
   }, []);
+
+  // 🟩 PROTECCIÓN: evita crash si user es null
+  if (!user) {
+    return (
+      <View
+        style={{
+          flex: 1,
+          justifyContent: "center",
+          alignItems: "center",
+          backgroundColor: "black",
+        }}
+      >
+        <Text style={{ color: "white", fontSize: 20 }}>
+          Inicia sesión para ver tu perfil
+        </Text>
+      </View>
+    );
+  }
 
   return (
     <Animated.View style={{ flex: 1, opacity: fadeAnim }}>
@@ -65,24 +83,47 @@ export default function ProfilePage() {
             borderColor: "#444",
             justifyContent: "center",
             alignItems: "center",
+            overflow: "hidden",
           }}
         >
-          <Text style={{ color: "#666", fontSize: 50 }}>🐾</Text>
+          {user.avatar ? (
+            <Image
+              source={{ uri: user.avatar }}
+              style={{ width: "100%", height: "100%" }}
+            />
+          ) : (
+            <Text style={{ color: "#666", fontSize: 50 }}>🐾</Text>
+          )}
         </View>
 
-        {/* BOTÓN EDITAR */}
-        <TouchableOpacity
-          style={{
-            alignSelf: "center",
-            marginTop: 15,
-            backgroundColor: "#333",
-            paddingVertical: 8,
-            paddingHorizontal: 20,
-            borderRadius: 20,
-          }}
-        >
-          <Text style={{ color: "white", fontSize: 16 }}>Editar perfil</Text>
-        </TouchableOpacity>
+        {/* BOTONES EDITAR / CONFIGURACIÓN */}
+        <View style={{ flexDirection: "row", alignSelf: "center", marginTop: 15, gap: 10 }}>
+          <TouchableOpacity
+            style={{
+              backgroundColor: "#16a34a",
+              paddingVertical: 8,
+              paddingHorizontal: 20,
+              borderRadius: 20,
+              flexDirection: "row",
+              alignItems: "center",
+              gap: 6,
+            }}
+            onPress={() => navigation.navigate("ProfileEdit")}
+          >
+            <Text style={{ color: "white", fontSize: 16 }}>✏️ Editar perfil</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={{
+              backgroundColor: "#333",
+              paddingVertical: 8,
+              paddingHorizontal: 14,
+              borderRadius: 20,
+            }}
+            onPress={() => navigation.navigate("Settings")}
+          >
+            <Text style={{ color: "white", fontSize: 16 }}>⚙️</Text>
+          </TouchableOpacity>
+        </View>
 
         {/* CARD PRINCIPAL */}
         <View
@@ -106,40 +147,46 @@ export default function ProfilePage() {
               marginBottom: 5,
             }}
           >
-            {profile?.display_name ?? "Sin nombre"}
+            {user.display_name ?? user.name ?? "Sin nombre"}
           </Text>
 
-          {/* Email — NO EXISTE user, así que lo saco */}
-          <Text
-            style={{
-              color: "#888",
-              fontSize: 14,
-              textAlign: "center",
-              marginBottom: 20,
-            }}
-          >
-            —
-          </Text>
-
-          {/* Campos */}
-          <View style={{ marginBottom: 15 }}>
-            <Text style={{ color: "#777", fontSize: 14 }}>Theriotype</Text>
-            <Text style={{ color: "white", fontSize: 18 }}>
-              {profile?.primary_theriotype ?? "—"}
-            </Text>
-          </View>
-
-          <View style={{ marginBottom: 15 }}>
-            <Text style={{ color: "#777", fontSize: 14 }}>Familia</Text>
-            <Text style={{ color: "white", fontSize: 18 }}>
-              {profile?.species_family ?? "—"}
-            </Text>
-          </View>
-
+          {/* BIO */}
           <View style={{ marginBottom: 15 }}>
             <Text style={{ color: "#777", fontSize: 14 }}>Biografía</Text>
             <Text style={{ color: "white", fontSize: 16 }}>
-              {profile?.biography ?? "—"}
+              {user.biography ?? "—"}
+            </Text>
+          </View>
+
+          {/* Theriotype */}
+          <View style={{ marginBottom: 15 }}>
+            <Text style={{ color: "#777", fontSize: 14 }}>Theriotype</Text>
+            <Text style={{ color: "white", fontSize: 18 }}>
+              {user.primary_theriotype ?? "—"}
+            </Text>
+          </View>
+
+          {/* Familia */}
+          <View style={{ marginBottom: 15 }}>
+            <Text style={{ color: "#777", fontSize: 14 }}>Familia</Text>
+            <Text style={{ color: "white", fontSize: 18 }}>
+              {user.species_family ?? "—"}
+            </Text>
+          </View>
+
+          {/* Habitat */}
+          <View style={{ marginBottom: 15 }}>
+            <Text style={{ color: "#777", fontSize: 14 }}>Hábitat</Text>
+            <Text style={{ color: "white", fontSize: 18 }}>
+              {user.habitat ?? "—"}
+            </Text>
+          </View>
+
+          {/* Rol */}
+          <View style={{ marginBottom: 15 }}>
+            <Text style={{ color: "#777", fontSize: 14 }}>Rol en la manada</Text>
+            <Text style={{ color: "white", fontSize: 18 }}>
+              {user.pack_role ?? "—"}
             </Text>
           </View>
 
@@ -149,18 +196,18 @@ export default function ProfilePage() {
               marginTop: 10,
               padding: 12,
               borderRadius: 8,
-              backgroundColor: profile?.is_premium ? "#14532d" : "#3f3f46",
+              backgroundColor: user.isPremium ? "#14532d" : "#3f3f46",
             }}
           >
             <Text
               style={{
-                color: profile?.is_premium ? "#22c55e" : "#aaa",
+                color: user.isPremium ? "#22c55e" : "#aaa",
                 textAlign: "center",
                 fontSize: 16,
                 fontWeight: "bold",
               }}
             >
-              {profile?.is_premium ? "Cuenta Premium" : "Cuenta Gratuita"}
+              {user.isPremium ? "Cuenta Premium" : "Cuenta Gratuita"}
             </Text>
           </View>
         </View>
@@ -194,7 +241,7 @@ export default function ProfilePage() {
           </View>
         </View>
 
-        {/* BOTÓN CERRAR SESIÓN — NO EXISTE signOut, así que lo saco */}
+        {/* BOTÓN CERRAR SESIÓN */}
         <TouchableOpacity
           style={{
             backgroundColor: "#b91c1c",
@@ -203,7 +250,7 @@ export default function ProfilePage() {
             marginTop: 30,
             marginHorizontal: 20,
           }}
-          onPress={() => setScreen("login")}
+          onPress={logout}
         >
           <Text
             style={{

@@ -1,11 +1,13 @@
-import { useRoute } from "@react-navigation/native";
-import { Audio } from "expo-av";
+import { useNavigation, useRoute } from "@react-navigation/native";
 import { LinearGradient } from "expo-linear-gradient";
+import * as ImagePicker from "expo-image-picker";
 import { useContext, useEffect, useRef, useState } from "react";
 import {
   Animated,
   FlatList,
   Image,
+  KeyboardAvoidingView,
+  Platform,
   StyleSheet,
   Text,
   TextInput,
@@ -13,507 +15,295 @@ import {
   Vibration,
   View,
 } from "react-native";
-import { AuthContext } from "../contexts/AuthContext";
-import { supabase } from "../lib/supabase";
+import { Ionicons } from "@expo/vector-icons";
+import PolaroidFrame from "../components/PolaroidFrame";
+import AuthContext from "../contexts/AuthContext";
+import { useFeatures } from "../contexts/AuthContext";
+import { MoodSelector, getMoodColors } from "../components/MoodSelector";
+import { saveData, loadData, STORAGE_KEYS } from "../services/storageService";
 
-// --- FASE LUNAR ---
 function getMoonPhase(date) {
   const lp = 2551443;
   const now = date.getTime() / 1000;
   const new_moon = Date.UTC(1970, 0, 7, 20, 35, 0) / 1000;
   const phase = ((now - new_moon) % lp) / lp;
-
-  if (phase < 0.1 || phase > 0.9) return "new";
-  if (phase < 0.4) return "waxing";
-  if (phase < 0.6) return "full";
-  return "waning";
+  if (phase < 0.1 || phase > 0.9) return "🌑";
+  if (phase < 0.4) return "🌒";
+  if (phase < 0.6) return "🌕";
+  return "🌘";
 }
 
-// --- MENSAJE ---
-function MessageItem({ item }) {
+function MessageItem({ item, hasReactionEmojis, hasMessageAnimation, hasDanceEmojis }) {
   const fadeAnim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
-    Animated.timing(fadeAnim, {
-      toValue: 1,
-      duration: 250,
-      useNativeDriver: true,
-    }).start();
+    Animated.spring(fadeAnim, { toValue: 1, useNativeDriver: true, tension: 100 }).start();
   }, []);
 
   return (
-    <Animated.View
-      style={{
-        opacity: fadeAnim,
-        transform: [
-          {
-            translateY: fadeAnim.interpolate({
-              inputRange: [0, 1],
-              outputRange: [10, 0],
-            }),
-          },
-        ],
-      }}
-    >
+    <Animated.View style={{ opacity: fadeAnim, transform: [{ translateY: fadeAnim.interpolate({ inputRange: [0, 1], outputRange: [8, 0] }) }] }}>
       <View style={[styles.message, item.fromMe ? styles.me : styles.them]}>
         {!item.fromMe && <Text style={styles.paw}>🐾</Text>}
-        <Text style={styles.messageText}>{item.text}</Text>
-        {item.fromMe && <Text style={styles.claw}>🗡️</Text>}
+        {item.image ? (
+          <Image source={{ uri: item.image }} style={{ width: 180, height: 180, borderRadius: 14 }} />
+        ) : (
+          <Text style={styles.messageText}>
+            {hasDanceEmojis && item.text?.includes("🎉") ? "💃 " + item.text + " 🕺" : item.text}
+          </Text>
+        )}
+        {item.fromMe && <Text style={{ marginLeft: 6, fontSize: 14, opacity: 0.7 }}>🗡️</Text>}
       </View>
-
-      <Text style={styles.timestamp}>
-        {new Date(item.created_at).toLocaleTimeString([], {
-          hour: "2-digit",
-          minute: "2-digit",
-        })}
+      <Text style={[styles.timestamp, { textAlign: item.fromMe ? "right" : "left", paddingHorizontal: 8 }]}>
+        {new Date(item.created_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+        {item.fromMe && " ✓"}
       </Text>
     </Animated.View>
   );
 }
 
-// --- PÁGINA ---
+const AUTO_REPLIES = [
+  "🐾 Estoy aquí...",
+  "Me encanta hablar contigo 💕",
+  "¿Qué tal tu día?",
+  "¿Eres más de luna llena o luna nueva? 🌕",
+  "Siento tu energía desde aquí 🔥",
+  "Mi manada me espera, pero tú primero 😊",
+];
+
 export default function ChatRoomPage() {
   const route = useRoute();
-  const params = route.params;
-
-  if (!params) {
-    return (
-      <View style={styles.center}>
-        <Text style={{ color: "white" }}>Chat no encontrado</Text>
-      </View>
-    );
-  }
-
-  const { chatId, name, photo } = params;
+  const navigation = useNavigation();
+  const params = route.params ?? {};
   const { user } = useContext(AuthContext);
+  const { hasFeature } = useFeatures();
+
+  const name = params.name ?? user?.chatContact?.name ?? "Luna Wolf";
+  const photo = params.photo ?? user?.chatContact?.photo ?? "https://randomuser.me/api/portraits/women/44.jpg";
+  const contactId = params.contactId ?? "default";
+  const chatKey = `${STORAGE_KEYS.CHATS}_${contactId}`;
 
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState("");
   const [otherTyping, setOtherTyping] = useState(false);
-  const [moon, setMoon] = useState(false);
-  const [moonPhase, setMoonPhase] = useState("full");
-  const [instinctAwake, setInstinctAwake] = useState(false);
+  const [moonPhase] = useState(getMoonPhase(new Date()));
+  const [bgColors, setBgColors] = useState(["#0f172a", "#1e293b"]);
 
   const flatListRef = useRef(null);
-  const slashAnim = useRef(new Animated.Value(0)).current;
 
-  const fadeOld = useRef(new Animated.Value(1)).current;
-  const fadeNew = useRef(new Animated.Value(0)).current;
-
-  const [oldColors, setOldColors] = useState(["#1a1a2e", "#312e81"]);
-  const [newColors, setNewColors] = useState(["#1a1a2e", "#312e81"]);
-
-  const sendSoundRef = useRef(null);
-  const receiveSoundRef = useRef(null);
-
+  // Cargar mensajes del storage
   useEffect(() => {
-    let mounted = true;
-
-    const loadSounds = async () => {
-      try {
-        const sendObj = await Audio.Sound.createAsync(
-          require("../assets/sounds/scratch.mp3"),
-          { volume: 0.8 }
-        );
-        const receiveObj = await Audio.Sound.createAsync(
-          require("../assets/sounds/howl.mp3"),
-          { volume: 0.8 }
-        );
-
-        if (mounted) {
-          sendSoundRef.current = sendObj.sound;
-          receiveSoundRef.current = receiveObj.sound;
-        }
-      } catch (e) {
-        console.log("Error cargando sonidos:", e);
+    async function loadMessages() {
+      const saved = await loadData(chatKey, []);
+      if (saved.length === 0) {
+        const welcome = [{ id: 1, text: `Hola! Soy ${name} 👋`, fromMe: false, created_at: new Date().toISOString() }];
+        setMessages(welcome);
+        saveData(chatKey, welcome);
+      } else {
+        setMessages(saved);
       }
-    };
-
-    loadSounds();
-
-    return () => {
-      mounted = false;
-      sendSoundRef.current?.unloadAsync();
-      receiveSoundRef.current?.unloadAsync();
-    };
-  }, []);
-
-  const playSendSound = async () => {
-    try {
-      Vibration.vibrate(20);
-      await sendSoundRef.current?.replayAsync();
-    } catch (e) {
-      console.log("Error al reproducir sendSound:", e);
     }
+    loadMessages();
+  }, [contactId]);
+
+  // Actualizar color de fondo según mood
+  useEffect(() => {
+    setBgColors(getMoodColors(user?.mood ?? "neutral"));
+  }, [user?.mood]);
+
+  const scrollToBottom = () => {
+    setTimeout(() => flatListRef.current?.scrollToEnd({ animated: true }), 100);
   };
 
-  const playReceiveSound = async () => {
-    try {
-      Vibration.vibrate(40);
-      await receiveSoundRef.current?.replayAsync();
-    } catch (e) {
-      console.log("Error al reproducir receiveSound:", e);
-    }
+  const persistMessages = (msgs) => {
+    saveData(chatKey, msgs);
   };
 
-  const loadMessages = async () => {
-    const { data } = await supabase
-      .from("messages")
-      .select("*")
-      .eq("chat_id", chatId)
-      .order("created_at", { ascending: true });
+  const sendMessage = async () => {
+    if (!input.trim()) return;
+    const text = input.trim();
+    setInput("");
 
-    if (data) {
-      setMessages(
-        data.map((m) => ({
-          id: m.id,
-          text: m.text,
-          fromMe: m.sender_id === user.id,
-          created_at: m.created_at,
-        }))
-      );
+    if (hasFeature("soundEffects")) Vibration.vibrate(20);
+
+    const newMsg = { id: Date.now(), text, fromMe: true, created_at: new Date().toISOString() };
+    const updated = [...messages, newMsg];
+    setMessages(updated);
+    persistMessages(updated);
+    scrollToBottom();
+
+    if (hasFeature("typingIndicator")) setOtherTyping(true);
+
+    setTimeout(() => {
+      setOtherTyping(false);
+      const reply = {
+        id: Date.now() + 1,
+        text: AUTO_REPLIES[Math.floor(Math.random() * AUTO_REPLIES.length)],
+        fromMe: false,
+        created_at: new Date().toISOString(),
+      };
+      setMessages((prev) => {
+        const next = [...prev, reply];
+        persistMessages(next);
+        return next;
+      });
+      if (hasFeature("soundEffects")) Vibration.vibrate(40);
+      scrollToBottom();
+    }, 1200 + Math.random() * 800);
+  };
+
+  const sendImage = async () => {
+    if (!hasFeature("sendImages")) {
+      alert("Necesitás un plan premium para enviar imágenes 📦");
+      return;
+    }
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true,
+      quality: 0.8,
+    });
+    if (!result.canceled && result.assets?.[0]) {
+      const msg = { id: Date.now(), image: result.assets[0].uri, fromMe: true, created_at: new Date().toISOString() };
+      const updated = [...messages, msg];
+      setMessages(updated);
+      persistMessages(updated);
       scrollToBottom();
     }
   };
 
-  useEffect(() => {
-    loadMessages();
-  }, []);
-
-  useEffect(() => {
-    setMoonPhase(getMoonPhase(new Date()));
-  }, []);
-
-  useEffect(() => {
-    const base = (() => {
-      if (otherTyping) return ["#1e293b", "#334155"];
-
-      switch (moonPhase) {
-        case "new":
-          return ["#000000", "#0f172a"];
-        case "waxing":
-          return ["#0f172a", "#1e293b"];
-        case "full":
-          return ["#1a1a2e", "#312e81"];
-        case "waning":
-          return ["#111827", "#1e293b"];
-        default:
-          return ["#1a1a2e", "#312e81"];
-      }
-    })();
-
-    setOldColors([...newColors]);
-    setNewColors([...base]);
-
-    fadeOld.setValue(1);
-    fadeNew.setValue(0);
-
-    Animated.parallel([
-      Animated.timing(fadeOld, {
-        toValue: 0,
-        duration: 300,
-        useNativeDriver: true,
-      }),
-      Animated.timing(fadeNew, {
-        toValue: 1,
-        duration: 300,
-        useNativeDriver: true,
-      }),
-    ]).start();
-  }, [moonPhase, otherTyping]);
-
-  useEffect(() => {
-    Animated.timing(slashAnim, {
-      toValue: 1,
-      duration: 400,
-      useNativeDriver: true,
-    }).start();
-  }, []);
-
-  useEffect(() => {
-    const channel = supabase
-      .channel("messages")
-      .on(
-        "postgres_changes",
-        {
-          event: "INSERT",
-          schema: "public",
-          table: "messages",
-          filter: `chat_id=eq.${chatId}`,
-        },
-        (payload) => {
-          const m = payload.new;
-          const fromMe = m.sender_id === user.id;
-
-          setMessages((prev) => [
-            ...prev,
-            {
-              id: m.id,
-              text: m.text,
-              fromMe,
-              created_at: m.created_at,
-            },
-          ]);
-
-          scrollToBottom();
-
-          if (!fromMe) playReceiveSound();
-          setInstinctAwake(false);
-        }
-      );
-
-    channel.subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [chatId, user.id]);
-
-  useEffect(() => {
-    supabase.from("typing_status").upsert({
-      chat_id: chatId,
-      user_id: user.id,
-      is_typing: input.length > 0,
-    });
-  }, [input, chatId, user.id]);
-
-  useEffect(() => {
-    const channel = supabase
-      .channel("typing")
-      .on(
-        "postgres_changes",
-        {
-          event: "UPDATE",
-          schema: "public",
-          table: "typing_status",
-          filter: `chat_id=eq.${chatId}`,
-        },
-        (payload) => {
-          if (payload.new.user_id !== user.id) {
-            setOtherTyping(payload.new.is_typing);
-          }
-        }
-      );
-
-    channel.subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [chatId, user.id]);
-
-  useEffect(() => {
-    if (messages.length === 0) return;
-
-    setInstinctAwake(false);
-    const timer = setTimeout(() => {
-      setInstinctAwake(true);
-    }, 60000);
-
-    return () => clearTimeout(timer);
-  }, [messages]);
-
-  const sendMessage = async () => {
-    if (!input.trim()) return;
-
-    const text = input;
-    setInput("");
-
-    await playSendSound();
-
-    await supabase.from("messages").insert({
-      chat_id: chatId,
-      sender_id: user.id,
-      text,
-    });
-  };
-
-  const scrollToBottom = () => {
-    setTimeout(() => {
-      flatListRef.current?.scrollToEnd({ animated: true });
-    }, 80);
-  };
-
   return (
     <View style={{ flex: 1 }}>
-      <Animated.View style={[StyleSheet.absoluteFill, { opacity: fadeOld }]}>
-        <LinearGradient colors={oldColors} style={StyleSheet.absoluteFill} />
-      </Animated.View>
-
-      <Animated.View style={[StyleSheet.absoluteFill, { opacity: fadeNew }]}>
-        <LinearGradient colors={newColors} style={StyleSheet.absoluteFill} />
-      </Animated.View>
-
-      <View style={styles.container}>
+      <LinearGradient colors={bgColors} style={StyleSheet.absoluteFill} />
+      <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === "ios" ? "padding" : "height"} keyboardVerticalOffset={0}>
+        {/* HEADER */}
         <View style={styles.header}>
-          <Image source={{ uri: photo }} style={styles.avatar} />
-          <Text style={styles.headerName}>{name}</Text>
+          <TouchableOpacity onPress={() => navigation.goBack()} style={{ padding: 8, marginRight: 4 }}>
+            <Ionicons name="arrow-back" size={24} color="white" />
+          </TouchableOpacity>
 
           <TouchableOpacity
-            onPress={() => setMoon(!moon)}
-            style={{ marginLeft: "auto" }}
+            onPress={() => navigation.navigate("ProfileDetail", { profile: { display_name: name, avatar: photo, photos: [photo], primary_theriotype: "Wolf" } })}
+            style={{ flexDirection: "row", alignItems: "center", flex: 1 }}
           >
-            <Text style={{ color: "white", fontSize: 22 }}>
-              {moon ? "🌑" : "🌕"}
-            </Text>
+            <Image source={{ uri: photo }} style={{ width: 40, height: 40, borderRadius: 20, marginRight: 10, borderWidth: 2, borderColor: "#22c55e" }} />
+            <View>
+              <Text style={{ color: "white", fontWeight: "bold", fontSize: 16 }}>{name}</Text>
+              <Text style={{ color: "#22c55e", fontSize: 12 }}>
+                {otherTyping && hasFeature("typingIndicator") ? "escribiendo..." : "En línea 🟢"}
+              </Text>
+            </View>
           </TouchableOpacity>
+
+          <Text style={{ color: "white", fontSize: 20, marginRight: 8 }}>{moonPhase}</Text>
+          <MoodSelector />
         </View>
 
+        {/* MENSAJES */}
         <FlatList
           ref={flatListRef}
           data={messages}
-          keyExtractor={(item) => item.id}
-          renderItem={({ item }) => <MessageItem item={item} />}
-          contentContainerStyle={styles.list}
+          keyExtractor={(item) => item.id.toString()}
+          renderItem={({ item }) => (
+            <MessageItem
+              item={item}
+              hasReactionEmojis={hasFeature("reactionEmojis")}
+              hasMessageAnimation={hasFeature("messageAnimation")}
+              hasDanceEmojis={hasFeature("danceEmojis")}
+            />
+          )}
+          contentContainerStyle={{ padding: 14, paddingBottom: 10 }}
+          onLayout={scrollToBottom}
+          showsVerticalScrollIndicator={false}
         />
 
-        {otherTyping && (
-          <Text style={styles.typing}>🐾 Está escribiendo...</Text>
-        )}
+        {/* INPUT */}
+        <View style={styles.inputArea}>
+          <TouchableOpacity onPress={sendImage} style={styles.iconBtn}>
+            <Ionicons name="image-outline" size={22} color={hasFeature("sendImages") ? "#22c55e" : "#555"} />
+          </TouchableOpacity>
 
-        {instinctAwake && !otherTyping && (
-          <Text style={styles.instinct}>
-            🐾 El instinto despierta… ¿sigues ahí?
-          </Text>
-        )}
-
-        <View style={styles.inputRow}>
           <TextInput
             style={styles.input}
             placeholder="Ruge algo..."
             placeholderTextColor="#666"
             value={input}
             onChangeText={setInput}
+            onSubmitEditing={sendMessage}
+            returnKeyType="send"
+            multiline
+            maxLength={500}
           />
-          <TouchableOpacity style={styles.sendBtn} onPress={sendMessage}>
-            <Text style={styles.sendText}>Enviar</Text>
+
+          <TouchableOpacity onPress={sendMessage} style={[styles.sendBtn, !input.trim() && { opacity: 0.4 }]} disabled={!input.trim()}>
+            <Ionicons name="send" size={20} color="white" />
           </TouchableOpacity>
         </View>
-
-        <Animated.View
-          pointerEvents="none"
-          style={[
-            styles.slashOverlay,
-            {
-              opacity: slashAnim.interpolate({
-                inputRange: [0, 1],
-                outputRange: [1, 0],
-              }),
-              transform: [
-                {
-                  translateX: slashAnim.interpolate({
-                    inputRange: [0, 1],
-                    outputRange: [0, 200],
-                  }),
-                },
-              ],
-            },
-          ]}
-        >
-          <Text style={styles.slashText}>🗡️</Text>
-        </Animated.View>
-      </View>
+      </KeyboardAvoidingView>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  center: {
-    flex: 1,
-    backgroundColor: "black",
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  container: { flex: 1 },
   header: {
     flexDirection: "row",
     alignItems: "center",
-    padding: 14,
+    paddingTop: 52,
+    paddingBottom: 12,
+    paddingHorizontal: 12,
     borderBottomWidth: 1,
-    borderColor: "#222",
-    backgroundColor: "rgba(0,0,0,0.3)",
+    borderColor: "rgba(255,255,255,0.1)",
+    backgroundColor: "rgba(0,0,0,0.4)",
   },
-  avatar: { width: 45, height: 45, borderRadius: 22 },
-  headerName: {
-    marginLeft: 12,
-    fontSize: 18,
-    fontWeight: "bold",
-    color: "white",
-  },
-  list: { padding: 14 },
   message: {
     padding: 12,
-    borderRadius: 14,
-    marginBottom: 6,
+    borderRadius: 18,
+    marginBottom: 2,
     maxWidth: "80%",
     flexDirection: "row",
-    alignItems: "center",
+    alignItems: "flex-end",
   },
   me: {
-    backgroundColor: "#1a3d2f",
+    backgroundColor: "#1a4028",
     alignSelf: "flex-end",
-    borderTopRightRadius: 2,
-    borderBottomRightRadius: 2,
+    borderBottomRightRadius: 4,
   },
   them: {
-    backgroundColor: "#2a2a2a",
+    backgroundColor: "rgba(255,255,255,0.1)",
     alignSelf: "flex-start",
-    borderTopLeftRadius: 4,
     borderBottomLeftRadius: 4,
   },
-  messageText: { fontSize: 16, color: "white", flexShrink: 1 },
-  paw: { marginRight: 6, fontSize: 18 },
-  claw: { marginLeft: 6, fontSize: 18 },
-  timestamp: {
-    color: "#ccc",
-    fontSize: 10,
-    marginBottom: 10,
-    marginLeft: 4,
-    fontStyle: "italic",
-  },
-  typing: {
-    color: "#ddd",
-    fontSize: 14,
-    marginLeft: 20,
-    marginBottom: 6,
-  },
-  instinct: {
-    color: "#cbd5f5",
-    fontSize: 13,
-    marginLeft: 20,
-    marginBottom: 6,
-    fontStyle: "italic",
-  },
-  inputRow: {
+  messageText: { fontSize: 16, color: "white", flexShrink: 1, lineHeight: 22 },
+  paw: { marginRight: 6, fontSize: 14, opacity: 0.7 },
+  timestamp: { color: "rgba(255,255,255,0.4)", fontSize: 10, marginBottom: 8 },
+  inputArea: {
     flexDirection: "row",
-    padding: 10,
+    alignItems: "flex-end",
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    paddingBottom: 28,
     borderTopWidth: 1,
-    borderColor: "#222",
-    backgroundColor: "rgba(0,0,0,0.3)",
+    borderColor: "rgba(255,255,255,0.1)",
+    backgroundColor: "rgba(0,0,0,0.5)",
+    gap: 8,
   },
+  iconBtn: { padding: 8, justifyContent: "center" },
   input: {
     flex: 1,
-    backgroundColor: "#1a1a1a",
-    borderRadius: 20,
-    paddingHorizontal: 15,
-    fontSize: 16,
+    backgroundColor: "rgba(255,255,255,0.1)",
+    borderRadius: 22,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    fontSize: 15,
     color: "white",
+    maxHeight: 100,
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.15)",
   },
   sendBtn: {
-    marginLeft: 10,
-    backgroundColor: "#22c55e",
-    paddingHorizontal: 18,
-    borderRadius: 20,
+    width: 42,
+    height: 42,
+    borderRadius: 21,
+    backgroundColor: "#16a34a",
     justifyContent: "center",
-  },
-  sendText: { color: "#fff", fontWeight: "bold" },
-  slashOverlay: {
-    position: "absolute",
-    top: "40%",
-    left: "10%",
-  },
-  slashText: {
-    fontSize: 80,
-    color: "rgba(255,255,255,0.25)",
+    alignItems: "center",
   },
 });

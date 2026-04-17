@@ -1,0 +1,142 @@
+export const fakeProfiles = [
+  {
+    id: 1,
+    name: "Luna",
+    species: "Wolf Therian",
+    age: 22,
+    image: require("../../assets/profiles/wolf_01.png")
+  },
+  {
+    id: 2,
+    name: "Fenrir",
+    species: "Wolf Therian",
+    age: 27,
+    image: require("../../assets/profiles/wolf_02.png")
+  },
+  {
+    id: 3,
+    name: "Raven",
+    species: "Crow Therian",
+    age: 24,
+    image: require("../../assets/profiles/crow_01.png")
+  },
+  {
+    id: 4,
+    name: "Shade",
+    species: "Crow Therian",
+    age: 29,
+    image: require("../../assets/profiles/crow_02.png")
+  },
+  {
+    id: 5,
+    name: "Ember",
+    species: "Fox Therian",
+    age: 21,
+    image: require("../../assets/profiles/fox_01.png")
+  },
+  {
+    id: 6,
+    name: "Vulpes",
+    species: "Fox Therian",
+    age: 26,
+    image: require("../../assets/profiles/fox_02.png")
+  },
+  {
+    id: 7,
+    name: "Nyx",
+    species: "Feline Therian",
+    age: 23,
+    image: require("../../assets/profiles/feline_01.png")
+  },
+  {
+    id: 8,
+    name: "Sable",
+    species: "Feline Therian",
+    age: 28,
+    image: require("../../assets/profiles/feline_02.png")
+  },
+  {
+    id: 9,
+    name: "Drakar",
+    species: "Dragonkin",
+    age: 30,
+    image: require("../../assets/profiles/dragon_01.png")
+  },
+  {
+    id: 10,
+    name: "Astra",
+    species: "Dragonkin",
+    age: 25,
+    image: require("../../assets/profiles/dragon_02.png")
+  },
+  {
+    id: 11,
+    name: "Rogue",
+    species: "Canine Therian",
+    age: 24,
+    image: require("../../assets/profiles/canine_01.png")
+  },
+  {
+    id: 12,
+    name: "Koda",
+    species: "Canine Therian",
+    age: 27,
+    image: require("../../assets/profiles/canine_02.png")
+  },
+  {
+    id: 13,
+    name: "Willow",
+    species: "Deer Therian",
+    age: 22,
+    image: require("../../assets/profiles/deer_01.png")
+  },
+  {
+    id: 14,
+    name: "Faun",
+    species: "Deer Therian",
+    age: 29,
+    image: require("../../assets/profiles/deer_02.png")
+  },
+  {
+    id: 15,
+    name: "Ursa",
+    species: "Bear Therian",
+    age: 31,
+    image: require("../../assets/profiles/bear_01.png")
+  },
+  {
+    id: 16,
+    name: "Kodiak",
+    species: "Bear Therian",
+    age: 26,
+    image: require("../../assets/profiles/bear_02.png")
+  },
+  {
+    id: 17,
+    name: "Corvus",
+    species: "Raven Therian",
+    age: 28,
+    image: require("../../assets/profiles/raven_01.png")
+  },
+  {
+    id: 18,
+    name: "Onyx",
+    species: "Raven Therian",
+    age: 24,
+    image: require("../../assets/profiles/raven_02.png")
+  },
+  {
+    id: 19,
+    name: "Lyn",
+    species: "Lynx Therian",
+    age: 23,
+    image: require("../../assets/profiles/lynx_01.png")
+  },
+  {
+    id: 20,
+    name: "Solstice",
+    species: "Lynx Therian",
+    age: 27,
+    image: require("../../assets/profiles/lynx_02.png")
+  }
+];
