@@ -44,3 +44,10 @@ app-example
 
 # Local Netlify folder
 .netlify
+
+# Build artifacts
+*.apk
+*.aab
+
+# Claude Code local config
+.claude/
