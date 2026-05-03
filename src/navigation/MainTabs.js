@@ -2,7 +2,10 @@ import { Ionicons } from "@expo/vector-icons";
 import { Image } from "react-native";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import { StyleSheet } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { useNavigation } from "@react-navigation/native";
 import { useAuth } from "../contexts/AuthContext";
+import { useEffect, useRef } from "react";
 
 import ChatListPage from "../pages/ChatListPage";
 import MatchesPage from "../pages/MatchesPage";
@@ -21,7 +24,18 @@ function VisitorsTab() {
 }
 
 export default function MainTabs() {
-  const { user } = useAuth();
+  const { user, newUser, setNewUser } = useAuth();
+  const insets = useSafeAreaInsets();
+  const navigation = useNavigation();
+  const redirected = useRef(false);
+
+  useEffect(() => {
+    if (newUser && !redirected.current) {
+      redirected.current = true;
+      setNewUser(false);
+      setTimeout(() => navigation.navigate("ProfileEdit"), 400);
+    }
+  }, [newUser]);
 
   return (
     <Tab.Navigator
@@ -30,8 +44,8 @@ export default function MainTabs() {
         tabBarStyle: {
           backgroundColor: "black",
           borderTopColor: "#222",
-          height: 86,
-          paddingBottom: 18,
+          height: 60 + insets.bottom,
+          paddingBottom: insets.bottom > 0 ? insets.bottom : 10,
           paddingTop: 8,
         },
         tabBarItemStyle: {

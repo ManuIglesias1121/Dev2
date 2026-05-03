@@ -1,5 +1,6 @@
-import React, { useContext, useState } from "react";
+import React, { useContext, useState, useEffect } from "react";
 import {
+  ActivityIndicator,
   Image,
   ScrollView,
   StyleSheet,
@@ -14,6 +15,7 @@ import NopeButton from "../components/buttons/NopeButton";
 import SuperMatchButton from "../components/buttons/SuperMatchButton";
 import ReportBlockModal from "../components/ReportBlockModal";
 import { AuthContext } from "../contexts/AuthContext";
+import { getExclusivePhotoUrls } from "../services/photoService";
 
 function InfoBadge({ icon, text }) {
   return (
@@ -29,8 +31,21 @@ export default function ProfileDetailPage({ route, navigation }) {
   const { user } = useContext(AuthContext);
   const [reportVisible, setReportVisible] = useState(false);
   const [currentPhoto, setCurrentPhoto] = useState(0);
+  const [exclusiveUrls, setExclusiveUrls] = useState([]);
+  const [loadingExclusive, setLoadingExclusive] = useState(false);
 
+  const isPremium = user?.isPremium || user?.is_premium || false;
   const photos = profile.photos?.length ? profile.photos : profile.avatar ? [profile.avatar] : [];
+  const hasExclusive = profile.exclusive_photos?.length > 0;
+
+  useEffect(() => {
+    if (isPremium && hasExclusive) {
+      setLoadingExclusive(true);
+      getExclusivePhotoUrls(profile.exclusive_photos)
+        .then(setExclusiveUrls)
+        .finally(() => setLoadingExclusive(false));
+    }
+  }, []);
 
   const handleSuperMatch = () => {
     if (!user?.isPremium) {
@@ -61,7 +76,7 @@ export default function ProfileDetailPage({ route, navigation }) {
             <Image source={{ uri: photos[currentPhoto] }} style={styles.photo} />
           ) : (
             <View style={[styles.photo, { backgroundColor: "#1a1a1a", justifyContent: "center", alignItems: "center" }]}>
-              <Text style={{ fontSize: 64 }}>🐾</Text>
+              <Text style={{ fontSize: 64 }}>👤</Text>
             </View>
           )}
 
@@ -107,7 +122,7 @@ export default function ProfileDetailPage({ route, navigation }) {
           </View>
 
           <View style={{ flexDirection: "row", alignItems: "center", marginBottom: 16 }}>
-            <Text style={{ color: "#22c55e", fontSize: 16 }}>🐾 {profile.primary_theriotype}</Text>
+            <Text style={{ color: "#22c55e", fontSize: 16 }}>🌿 {profile.primary_theriotype}</Text>
             {profile.distance != null && (
               <Text style={{ color: "#666", fontSize: 14, marginLeft: 12 }}>📍 {profile.distance} km</Text>
             )}
@@ -129,7 +144,7 @@ export default function ProfileDetailPage({ route, navigation }) {
             {profile.city && <InfoBadge icon="📍" text={profile.city} />}
           </View>
 
-          {/* GALERÍA */}
+          {/* GALERÍA PÚBLICA */}
           {photos.length > 1 && (
             <>
               <Text style={{ color: "white", fontSize: 18, fontWeight: "bold", marginBottom: 12 }}>Fotos</Text>
@@ -141,6 +156,48 @@ export default function ProfileDetailPage({ route, navigation }) {
                 ))}
               </View>
             </>
+          )}
+
+          {/* FOTOS EXCLUSIVAS */}
+          {hasExclusive && (
+            <View style={{ marginTop: 24 }}>
+              <View style={{ flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 12 }}>
+                <Text style={{ color: "white", fontSize: 18, fontWeight: "bold" }}>Fotos exclusivas</Text>
+                <View style={{ backgroundColor: "#a78bfa22", borderRadius: 12, paddingHorizontal: 8, paddingVertical: 3, borderWidth: 1, borderColor: "#a78bfa" }}>
+                  <Text style={{ color: "#c084fc", fontSize: 11, fontWeight: "bold" }}>👑 PREMIUM</Text>
+                </View>
+              </View>
+
+              {isPremium ? (
+                loadingExclusive ? (
+                  <ActivityIndicator color="#a78bfa" style={{ marginVertical: 20 }} />
+                ) : (
+                  <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
+                    {exclusiveUrls.map((url, i) => (
+                      <View key={i} style={{ width: "31%", aspectRatio: 1 }}>
+                        <Image source={{ uri: url }} style={{ width: "100%", height: "100%", borderRadius: 10 }} />
+                      </View>
+                    ))}
+                  </View>
+                )
+              ) : (
+                <TouchableOpacity
+                  onPress={() => navigation.navigate("PremiumPlans")}
+                  style={{ backgroundColor: "rgba(167,139,250,0.08)", borderRadius: 14, padding: 24, alignItems: "center", borderWidth: 1, borderColor: "#a78bfa44", gap: 8 }}
+                >
+                  <Text style={{ fontSize: 36 }}>🔒</Text>
+                  <Text style={{ color: "#c084fc", fontSize: 15, fontWeight: "bold" }}>
+                    {profile.exclusive_photos.length} fotos exclusivas bloqueadas
+                  </Text>
+                  <Text style={{ color: "#888", fontSize: 13, textAlign: "center" }}>
+                    Hazte Premium para ver las fotos exclusivas de este perfil
+                  </Text>
+                  <View style={{ backgroundColor: "#a78bfa", paddingHorizontal: 20, paddingVertical: 10, borderRadius: 20, marginTop: 4 }}>
+                    <Text style={{ color: "white", fontWeight: "bold" }}>Ver planes Premium →</Text>
+                  </View>
+                </TouchableOpacity>
+              )}
+            </View>
           )}
         </View>
       </ScrollView>

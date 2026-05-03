@@ -36,13 +36,34 @@ export async function getCurrentLocation() {
 }
 
 export async function reverseGeocode(latitude, longitude) {
+  // Intentar primero con Nominatim (OpenStreetMap) — más preciso para ciudades
+  try {
+    const res = await fetch(
+      `https://nominatim.openstreetmap.org/reverse?lat=${latitude}&lon=${longitude}&format=json&addressdetails=1`,
+      { headers: { "Accept-Language": "es", "User-Agent": "TherianMatch/1.0" } }
+    );
+    const data = await res.json();
+    if (data?.address) {
+      const a = data.address;
+      // Prioridad: city > town > village > municipality > county > state
+      const city =
+        a.city || a.town || a.village || a.municipality ||
+        a.city_district || a.suburb || a.county || a.state;
+      return { city: city || "Desconocida", country: a.country || "" };
+    }
+  } catch {}
+
+  // Fallback con expo-location
   const Location = await getLocationModule();
   if (!Location) return null;
   try {
     const results = await Location.reverseGeocodeAsync({ latitude, longitude });
     if (results?.[0]) {
-      const { city, region, country } = results[0];
-      return { city: city ?? region ?? "Desconocida", country: country ?? "" };
+      const { city, district, subregion, region, country } = results[0];
+      return {
+        city: city || district || subregion || region || "Desconocida",
+        country: country || "",
+      };
     }
     return null;
   } catch {

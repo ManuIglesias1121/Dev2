@@ -14,8 +14,11 @@ import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { useNavigation } from "@react-navigation/native";
 import SwipeCard from "../components/SwipeCard";
+import BannerAdComponent from "../components/BannerAdComponent";
 import { getTherianProfiles } from "../services/profilesService";
+import { showInterstitialAd } from "../services/adService";
 import { useAuth } from "../contexts/AuthContext";
+import { saveData, loadData, STORAGE_KEYS } from "../services/storageService";
 
 const THERIOTYPES_OPTIONS = [
   "Wolf", "Fox", "Crow", "Serpent", "Panther", "Tiger",
@@ -24,8 +27,8 @@ const THERIOTYPES_OPTIONS = [
 
 const DEFAULT_FILTERS = {
   ageMin: 18,
-  ageMax: 45,
-  maxDistance: 100,
+  ageMax: 99,
+  maxDistance: 500,
   theriotypes: [],
   onlyPremium: false,
   gender: "all",
@@ -42,10 +45,12 @@ export default function SwipePage() {
   const navigation = useNavigation();
   const { user, swipeProfile } = useAuth();
   const fadeAnim = useRef(new Animated.Value(0)).current;
+  const swipeCount = useRef(0);
+  const isPremium = user?.plan && user.plan !== "free";
 
   useEffect(() => {
     async function load() {
-      const data = await getTherianProfiles();
+      const data = await getTherianProfiles(user?.supabaseId || user?.id);
       setProfiles(data);
       setLoading(false);
       Animated.timing(fadeAnim, { toValue: 1, duration: 500, useNativeDriver: true }).start();
@@ -81,6 +86,33 @@ export default function SwipePage() {
       setIndex((i) => i + 1);
       setNoMoreVisible(false);
     }
+
+    if (!isPremium) {
+      swipeCount.current += 1;
+      if (swipeCount.current % 10 === 0) {
+        showInterstitialAd();
+      }
+    }
+  };
+
+  const handleSuperLike = async () => {
+    if (!current) return;
+    const existing = await loadData(STORAGE_KEYS.CHAT_CONTACTS + "_supermatches", []);
+    const alreadyExists = existing.find((m) => m.id === current.id);
+    if (!alreadyExists) {
+      const newMatch = {
+        id: current.id || Date.now(),
+        sender: {
+          display_name: current.display_name || current.name,
+          avatar: current.avatar,
+          photos: current.photos || (current.avatar ? [current.avatar] : []),
+          primary_theriotype: current.primary_theriotype,
+        },
+        created_at: new Date().toISOString(),
+      };
+      await saveData(STORAGE_KEYS.CHAT_CONTACTS + "_supermatches", [newMatch, ...existing]);
+    }
+    handleSwipe();
   };
 
   const applyFilters = () => {
@@ -115,7 +147,7 @@ export default function SwipePage() {
     <View style={styles.container}>
       {/* HEADER */}
       <View style={styles.header}>
-        <Text style={styles.logo}>🐾 TherianMatch</Text>
+        <Text style={styles.logo}>TherianMatch</Text>
         <TouchableOpacity onPress={() => { setPendingFilters(filters); setShowFilters(true); }} style={styles.filterBtn}>
           <Ionicons name="options-outline" size={22} color={filtersActive ? "#22c55e" : "white"} />
           {filtersActive && <View style={styles.filterDot} />}
@@ -129,14 +161,14 @@ export default function SwipePage() {
             profile={current}
             onNope={handleSwipe}
             onLike={handleSwipe}
-            onSuper={handleSwipe}
+            onSuper={handleSuperLike}
             onOpenGallery={() => navigation.navigate("GalleryPage", { photos: current.photos })}
             onOpenProfile={() => navigation.navigate("ProfileDetail", { profile: current })}
           />
         </Animated.View>
       ) : (
         <View style={styles.center}>
-          <Text style={{ fontSize: 48 }}>🐾</Text>
+          <Text style={{ fontSize: 48 }}>✨</Text>
           <Text style={{ color: "white", fontSize: 20, fontWeight: "bold", marginTop: 16 }}>
             {noMoreVisible ? "¡Ya viste todos!" : "Sin resultados"}
           </Text>
@@ -167,6 +199,9 @@ export default function SwipePage() {
           </Text>
         </View>
       )}
+
+      {/* BANNER PUBLICITARIO — solo usuarios free */}
+      {!isPremium && <BannerAdComponent style={styles.banner} />}
 
       {/* MODAL FILTROS */}
       <Modal visible={showFilters} transparent animationType="slide">
@@ -199,9 +234,9 @@ export default function SwipePage() {
                   <View style={{ flex: 1 }}>
                     <Text style={styles.filterLabel}>Máxima: {pendingFilters.ageMax}</Text>
                     <View style={{ flexDirection: "row", gap: 8, marginTop: 8, flexWrap: "wrap" }}>
-                      {[25, 30, 35, 40, 45, 50].map((v) => (
+                      {[25, 30, 35, 40, 50, 99].map((v) => (
                         <TouchableOpacity key={v} onPress={() => setPendingFilters((p) => ({ ...p, ageMax: v }))} style={[styles.chip, pendingFilters.ageMax === v && styles.chipActive]}>
-                          <Text style={{ color: pendingFilters.ageMax === v ? "#22c55e" : "#aaa", fontSize: 13 }}>{v}</Text>
+                          <Text style={{ color: pendingFilters.ageMax === v ? "#22c55e" : "#aaa", fontSize: 13 }}>{v === 99 ? "Sin límite" : v}</Text>
                         </TouchableOpacity>
                       ))}
                     </View>
@@ -210,11 +245,11 @@ export default function SwipePage() {
               </FilterSection>
 
               {/* DISTANCIA */}
-              <FilterSection title={`Distancia máxima: ${pendingFilters.maxDistance} km`}>
+              <FilterSection title={`Distancia máxima: ${pendingFilters.maxDistance === 500 ? "Sin límite" : pendingFilters.maxDistance + " km"}`}>
                 <View style={{ flexDirection: "row", gap: 8, flexWrap: "wrap" }}>
                   {[5, 10, 25, 50, 100, 500].map((v) => (
                     <TouchableOpacity key={v} onPress={() => setPendingFilters((p) => ({ ...p, maxDistance: v }))} style={[styles.chip, pendingFilters.maxDistance === v && styles.chipActive]}>
-                      <Text style={{ color: pendingFilters.maxDistance === v ? "#22c55e" : "#aaa", fontSize: 13 }}>{v} km</Text>
+                      <Text style={{ color: pendingFilters.maxDistance === v ? "#22c55e" : "#aaa", fontSize: 13 }}>{v === 500 ? "Sin límite" : v + " km"}</Text>
                     </TouchableOpacity>
                   ))}
                 </View>
@@ -304,6 +339,12 @@ const styles = StyleSheet.create({
   swipesBar: {
     padding: 12,
     alignItems: "center",
+    borderTopWidth: 1,
+    borderColor: "#111",
+  },
+  banner: {
+    alignItems: "center",
+    backgroundColor: "#0a0a0a",
     borderTopWidth: 1,
     borderColor: "#111",
   },

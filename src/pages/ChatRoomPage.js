@@ -1,4 +1,11 @@
 import { useNavigation, useRoute } from "@react-navigation/native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { AVATARS } from "../data/avatarAssets";
+
+function resolveSource(img) {
+  if (!img) return require("../../assets/logo1.png");
+  return typeof img === "string" ? { uri: img } : img;
+}
 import { LinearGradient } from "expo-linear-gradient";
 import * as ImagePicker from "expo-image-picker";
 import { useContext, useEffect, useRef, useState } from "react";
@@ -43,7 +50,7 @@ function MessageItem({ item, hasReactionEmojis, hasMessageAnimation, hasDanceEmo
   return (
     <Animated.View style={{ opacity: fadeAnim, transform: [{ translateY: fadeAnim.interpolate({ inputRange: [0, 1], outputRange: [8, 0] }) }] }}>
       <View style={[styles.message, item.fromMe ? styles.me : styles.them]}>
-        {!item.fromMe && <Text style={styles.paw}>🐾</Text>}
+        {!item.fromMe && <Text style={styles.paw}>💬</Text>}
         {item.image ? (
           <Image source={{ uri: item.image }} style={{ width: 180, height: 180, borderRadius: 14 }} />
         ) : (
@@ -62,7 +69,7 @@ function MessageItem({ item, hasReactionEmojis, hasMessageAnimation, hasDanceEmo
 }
 
 const AUTO_REPLIES = [
-  "🐾 Estoy aquí...",
+  "Estoy aquí...",
   "Me encanta hablar contigo 💕",
   "¿Qué tal tu día?",
   "¿Eres más de luna llena o luna nueva? 🌕",
@@ -76,9 +83,11 @@ export default function ChatRoomPage() {
   const params = route.params ?? {};
   const { user } = useContext(AuthContext);
   const { hasFeature } = useFeatures();
+  const insets = useSafeAreaInsets();
 
   const name = params.name ?? user?.chatContact?.name ?? "Luna Wolf";
-  const photo = params.photo ?? user?.chatContact?.photo ?? "https://randomuser.me/api/portraits/women/44.jpg";
+  const photo = params.photo ?? user?.chatContact?.photo ?? AVATARS["loba-1"];
+  const photos = params.photos ?? (photo ? [photo] : []);
   const contactId = params.contactId ?? "default";
   const chatKey = `${STORAGE_KEYS.CHATS}_${contactId}`;
 
@@ -90,7 +99,7 @@ export default function ChatRoomPage() {
 
   const flatListRef = useRef(null);
 
-  // Cargar mensajes del storage
+  // Cargar mensajes y registrar contacto en la lista de chats
   useEffect(() => {
     async function loadMessages() {
       const saved = await loadData(chatKey, []);
@@ -100,6 +109,14 @@ export default function ChatRoomPage() {
         saveData(chatKey, welcome);
       } else {
         setMessages(saved);
+      }
+
+      // Guardar este contacto en la lista persistente de chats
+      const contacts = await loadData(STORAGE_KEYS.CHAT_CONTACTS, []);
+      const exists = contacts.find((c) => c.contactId === contactId);
+      if (!exists) {
+        const updated = [{ contactId, name, photo }, ...contacts];
+        saveData(STORAGE_KEYS.CHAT_CONTACTS, updated);
       }
     }
     loadMessages();
@@ -173,25 +190,30 @@ export default function ChatRoomPage() {
   return (
     <View style={{ flex: 1 }}>
       <LinearGradient colors={bgColors} style={StyleSheet.absoluteFill} />
-      <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === "ios" ? "padding" : "height"} keyboardVerticalOffset={0}>
+      <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === "ios" ? "padding" : "height"} keyboardVerticalOffset={insets.bottom}>
         {/* HEADER */}
         <View style={styles.header}>
           <TouchableOpacity onPress={() => navigation.goBack()} style={{ padding: 8, marginRight: 4 }}>
             <Ionicons name="arrow-back" size={24} color="white" />
           </TouchableOpacity>
 
-          <TouchableOpacity
-            onPress={() => navigation.navigate("ProfileDetail", { profile: { display_name: name, avatar: photo, photos: [photo], primary_theriotype: "Wolf" } })}
-            style={{ flexDirection: "row", alignItems: "center", flex: 1 }}
-          >
-            <Image source={{ uri: photo }} style={{ width: 40, height: 40, borderRadius: 20, marginRight: 10, borderWidth: 2, borderColor: "#22c55e" }} />
-            <View>
+          <View style={{ flexDirection: "row", alignItems: "center", flex: 1 }}>
+            <TouchableOpacity
+              onPress={() => photos.length > 0 && navigation.navigate("GalleryPage", { photos, initialIndex: 0 })}
+              style={{ marginRight: 10 }}
+            >
+              <Image source={resolveSource(photo)} style={{ width: 40, height: 40, borderRadius: 20, borderWidth: 2, borderColor: "#22c55e" }} />
+            </TouchableOpacity>
+            <TouchableOpacity
+              onPress={() => navigation.navigate("ProfileDetail", { profile: { display_name: name, avatar: photo, photos, primary_theriotype: "Wolf" } })}
+              style={{ flex: 1 }}
+            >
               <Text style={{ color: "white", fontWeight: "bold", fontSize: 16 }}>{name}</Text>
               <Text style={{ color: "#22c55e", fontSize: 12 }}>
                 {otherTyping && hasFeature("typingIndicator") ? "escribiendo..." : "En línea 🟢"}
               </Text>
-            </View>
-          </TouchableOpacity>
+            </TouchableOpacity>
+          </View>
 
           <Text style={{ color: "white", fontSize: 20, marginRight: 8 }}>{moonPhase}</Text>
           <MoodSelector />
@@ -216,7 +238,7 @@ export default function ChatRoomPage() {
         />
 
         {/* INPUT */}
-        <View style={styles.inputArea}>
+        <View style={[styles.inputArea, { paddingBottom: Math.max(insets.bottom, 12) }]}>
           <TouchableOpacity onPress={sendImage} style={styles.iconBtn}>
             <Ionicons name="image-outline" size={22} color={hasFeature("sendImages") ? "#22c55e" : "#555"} />
           </TouchableOpacity>
@@ -279,7 +301,7 @@ const styles = StyleSheet.create({
     alignItems: "flex-end",
     paddingHorizontal: 12,
     paddingVertical: 10,
-    paddingBottom: 28,
+    paddingBottom: 12,
     borderTopWidth: 1,
     borderColor: "rgba(255,255,255,0.1)",
     backgroundColor: "rgba(0,0,0,0.5)",

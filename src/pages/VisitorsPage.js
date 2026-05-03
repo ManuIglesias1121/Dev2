@@ -1,5 +1,10 @@
 import { useNavigation } from "@react-navigation/native";
 import React, { useState } from "react";
+
+function resolveSource(img) {
+  if (!img) return require("../../assets/logo1.png");
+  return typeof img === "string" ? { uri: img } : img;
+}
 import {
   Image,
   StyleSheet,
@@ -43,7 +48,7 @@ export default function VisitorsPage() {
             })
           }
         >
-          <Image source={{ uri: v.avatar }} style={styles.avatar} />
+          <Image source={resolveSource(v.avatar)} style={styles.avatar} />
 
           <Text style={styles.name}>{v.display_name}</Text>
           <Text style={styles.info}>{v.primary_theriotype}</Text>

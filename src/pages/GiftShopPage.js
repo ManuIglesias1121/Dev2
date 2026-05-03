@@ -1,21 +1,35 @@
 import React, { useState } from "react";
 import { useAuth } from "../contexts/AuthContext";
 import {
-  FlatList,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
   ScrollView,
   Alert,
-  Animated,
+  ActivityIndicator,
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
+import { showRewardedAd } from "../services/adService";
 
 export default function GiftShopPage() {
   const { user, GIFT_FEATURES, buyGift, addCoins } = useAuth();
   const [selectedGift, setSelectedGift] = useState(null);
   const [justBought, setJustBought] = useState(null);
+  const [watchingAd, setWatchingAd] = useState(false);
+  const COINS_PER_AD = 50;
+
+  const handleWatchAd = async () => {
+    setWatchingAd(true);
+    const rewarded = await showRewardedAd(() => {
+      addCoins(COINS_PER_AD);
+      Alert.alert("¡Ganaste monedas!", `+${COINS_PER_AD} monedas añadidas 💰`);
+    });
+    if (!rewarded) {
+      Alert.alert("Sin publicidad disponible", "Intentá de nuevo en unos segundos.");
+    }
+    setWatchingAd(false);
+  };
 
   const handleBuyGift = (giftId) => {
     const gift = GIFT_FEATURES[giftId];
@@ -181,12 +195,23 @@ export default function GiftShopPage() {
           </View>
         )}
 
-        {/* Test Coins Button */}
+        {/* Ver video para ganar monedas */}
         <TouchableOpacity
-          style={styles.testButton}
-          onPress={() => addCoins(50)}
+          style={[styles.watchAdButton, watchingAd && styles.watchAdButtonDisabled]}
+          onPress={handleWatchAd}
+          disabled={watchingAd}
         >
-          <Text style={styles.testButtonText}>+ 50 monedas (test)</Text>
+          {watchingAd ? (
+            <ActivityIndicator color="#fff" size="small" />
+          ) : (
+            <>
+              <Text style={styles.watchAdIcon}>▶️</Text>
+              <View>
+                <Text style={styles.watchAdTitle}>Ver video publicitario</Text>
+                <Text style={styles.watchAdSubtitle}>Ganá {COINS_PER_AD} monedas gratis 💰</Text>
+              </View>
+            </>
+          )}
         </TouchableOpacity>
       </ScrollView>
     </View>
@@ -426,18 +451,35 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
     fontSize: 16,
   },
-  testButton: {
+  watchAdButton: {
     marginHorizontal: 16,
     marginTop: 20,
-    backgroundColor: "rgba(99, 102, 241, 0.2)",
-    paddingVertical: 12,
-    borderRadius: 12,
+    marginBottom: 10,
+    backgroundColor: "rgba(234, 179, 8, 0.15)",
+    paddingVertical: 14,
+    paddingHorizontal: 20,
+    borderRadius: 14,
+    flexDirection: "row",
     alignItems: "center",
+    gap: 14,
     borderWidth: 1,
-    borderColor: "#6366f1",
+    borderColor: "#ca8a04",
+    justifyContent: "center",
   },
-  testButtonText: {
-    color: "#a5b4fc",
+  watchAdButtonDisabled: {
+    opacity: 0.5,
+  },
+  watchAdIcon: {
+    fontSize: 24,
+  },
+  watchAdTitle: {
+    color: "#fbbf24",
     fontWeight: "bold",
+    fontSize: 15,
+  },
+  watchAdSubtitle: {
+    color: "#a16207",
+    fontSize: 12,
+    marginTop: 2,
   },
 });

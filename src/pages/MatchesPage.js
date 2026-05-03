@@ -1,5 +1,10 @@
 import { useNavigation } from "@react-navigation/native";
 import React, { useState } from "react";
+
+function resolveSource(img) {
+  if (!img) return require("../../assets/logo1.png");
+  return typeof img === "string" ? { uri: img } : img;
+}
 import {
   Animated,
   FlatList,
@@ -69,7 +74,7 @@ export default function MatchesPage() {
   const MatchCard = ({ item }) => (
     <TouchableOpacity onPress={() => goToChat(item)} style={styles.card}>
       <View style={{ position: "relative" }}>
-        <Image source={{ uri: item.avatar }} style={styles.avatar} />
+        <Image source={resolveSource(item.avatar)} style={styles.avatar} />
         {item.isOnline && <View style={styles.onlineDot} />}
         {item.unreadCount > 0 && (
           <View style={styles.unreadBadge}>
@@ -84,7 +89,7 @@ export default function MatchesPage() {
           {item.age && <Text style={{ color: "#666", fontSize: 14 }}>{item.age}</Text>}
           {item.isPremium && <Text style={{ fontSize: 13 }}>👑</Text>}
         </View>
-        <Text style={styles.theriotype}>🐾 {item.primary_theriotype} • {item.city}</Text>
+        <Text style={styles.theriotype}>{item.primary_theriotype} • {item.city}</Text>
         <Text style={styles.lastMessage} numberOfLines={1}>{item.lastMessage}</Text>
       </View>
 
@@ -101,7 +106,7 @@ export default function MatchesPage() {
     <TouchableOpacity onPress={() => goToChat(item)} style={styles.bubble}>
       <View style={{ position: "relative" }}>
         <LinearGradient colors={["#22c55e", "#16a34a"]} style={styles.bubbleRing}>
-          <Image source={{ uri: item.avatar }} style={styles.bubbleAvatar} />
+          <Image source={resolveSource(item.avatar)} style={styles.bubbleAvatar} />
         </LinearGradient>
         {item.isOnline && <View style={[styles.onlineDot, { bottom: 2, right: 2 }]} />}
       </View>
@@ -164,7 +169,7 @@ export default function MatchesPage() {
             {olderMatches.map((m) => <MatchCard key={m.id} item={m} />)}
             {filtered.length === 0 && (
               <View style={styles.emptyState}>
-                <Text style={{ fontSize: 48 }}>🐾</Text>
+                <Text style={{ fontSize: 48 }}>💫</Text>
                 <Text style={styles.emptyTitle}>Sin matches aún</Text>
                 <Text style={styles.emptySubtitle}>
                   {search ? "No encontramos ese match" : "¡Seguí haciendo swipe para encontrar tu manada!"}

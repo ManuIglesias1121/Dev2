@@ -18,12 +18,52 @@ export default {
     },
 
     android: {
-      package: "com.manuiglesias.therianmatch"
+      package: "com.manuiglesias.therianmatch",
+      edgeToEdgeEnabled: true,
+      permissions: [
+        "android.permission.READ_MEDIA_IMAGES",
+        "android.permission.READ_EXTERNAL_STORAGE",
+        "android.permission.CAMERA",
+      ],
     },
 
+    plugins: [
+      [
+        "expo-image-picker",
+        {
+          photosPermission: "TherianMatch necesita acceso a tu galería para cambiar tu foto de perfil.",
+          cameraPermission: "TherianMatch necesita acceso a tu cámara.",
+        }
+      ],
+      [
+        "expo-location",
+        {
+          locationAlwaysAndWhenInUsePermission: "TherianMatch usa tu ubicación para mostrarte perfiles cercanos."
+        }
+      ]
+    ],
+
     web: {
-      favicon: "./assets/favicon.png"
+      favicon: "./assets/favicon.png",
+      bundler: "metro",
+      output: "single",
+      name: "TherianMatch",
+      shortName: "TherianMatch",
+      description: "Encuentra tu manada",
+      themeColor: "#22c55e",
+      backgroundColor: "#000000",
+      display: "standalone",
+      orientation: "portrait",
+      lang: "es",
     },
+
+    // Plugin de AdMob — descomentar al hacer EAS Build con react-native-google-mobile-ads instalado
+    // plugins: [
+    //   ["react-native-google-mobile-ads", {
+    //     androidAppId: "ca-app-pub-XXXXXXXXXXXXXXXX~XXXXXXXXXX",
+    //     iosAppId: "ca-app-pub-XXXXXXXXXXXXXXXX~XXXXXXXXXX",
+    //   }]
+    // ],
 
     extra: {
       supabaseUrl: "https://TU-PROJECT.supabase.co",

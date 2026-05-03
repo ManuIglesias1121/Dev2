@@ -11,6 +11,7 @@ import {
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { AuthContext } from "../contexts/AuthContext";
+import { saveData, STORAGE_KEYS } from "../services/storageService";
 
 function Section({ title, children }) {
   return (
@@ -73,6 +74,27 @@ export default function SettingsPage({ navigation }) {
           onPress: () => {
             Alert.alert("Cuenta eliminada", "Tu cuenta ha sido eliminada.");
             logout();
+          },
+        },
+      ]
+    );
+  };
+
+  const handleClearBotData = () => {
+    Alert.alert(
+      "Limpiar datos de prueba",
+      "Se eliminarán todos los chats y matches de bots. Esta acción no se puede deshacer.",
+      [
+        { text: "Cancelar", style: "cancel" },
+        {
+          text: "Limpiar",
+          style: "destructive",
+          onPress: async () => {
+            await saveData(STORAGE_KEYS.CHAT_CONTACTS, []);
+            await saveData(STORAGE_KEYS.CHATS, []);
+            await saveData(STORAGE_KEYS.MATCHES, []);
+            await saveData(STORAGE_KEYS.CHAT_CONTACTS + "_supermatches", []);
+            Alert.alert("¡Listo!", "Chats y matches de bots eliminados.");
           },
         },
       ]
@@ -156,6 +178,18 @@ export default function SettingsPage({ navigation }) {
         <Row icon="bug-outline" iconColor="#f59e0b" label="Reportar un problema" onPress={() => Alert.alert("Reporte", "Gracias. Revisaremos tu reporte.")} last />
       </Section>
 
+      {/* DATOS */}
+      <Section title="Datos">
+        <Row
+          icon="trash-outline"
+          iconColor="#f59e0b"
+          label="Limpiar chats y matches de bots"
+          sublabel="Elimina todos los datos de prueba"
+          onPress={handleClearBotData}
+          last
+        />
+      </Section>
+
       {/* ACCIONES DE CUENTA */}
       <View style={{ paddingHorizontal: 16, gap: 10, marginBottom: 10 }}>
         <TouchableOpacity
@@ -181,7 +215,7 @@ export default function SettingsPage({ navigation }) {
       </View>
 
       <Text style={{ color: "#333", textAlign: "center", fontSize: 12, marginBottom: 20 }}>
-        TherianMatch v1.0.0 • Hecho con 🐾
+        TherianMatch v1.0.0 • Hecho con ❤️
       </Text>
     </ScrollView>
   );

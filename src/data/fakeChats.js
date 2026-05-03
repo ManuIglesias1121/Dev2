@@ -1,9 +1,11 @@
+import { AVATARS } from "./avatarAssets";
+
 export const fakeChats = [
   {
     chatId: 1,
     other: {
-      display_name: "Luna",
-      avatar: "https://images.unsplash.com/photo-1508672019048-805c876b67e2?w=800",
+      display_name: "Lyra",
+      avatar: AVATARS["loba-1"],
     },
     lastMessage: {
       text: "¿Sigues ahí?",
@@ -13,8 +15,8 @@ export const fakeChats = [
   {
     chatId: 2,
     other: {
-      display_name: "Aiden",
-      avatar: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=800",
+      display_name: "Zephyr",
+      avatar: AVATARS["zorro-1"],
     },
     lastMessage: {
       text: "Me encantó hablar contigo",
@@ -24,8 +26,8 @@ export const fakeChats = [
   {
     chatId: 3,
     other: {
-      display_name: "Raven",
-      avatar: "https://images.unsplash.com/photo-1529626455594-4ff0802cfb7e?w=800",
+      display_name: "Vixie",
+      avatar: AVATARS["fox-f-1"],
     },
     lastMessage: null,
   },

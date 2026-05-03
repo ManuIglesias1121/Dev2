@@ -1,5 +1,8 @@
 import React, { createContext, useContext, useState, useEffect } from "react";
 import { saveData, loadData, STORAGE_KEYS } from "../services/storageService";
+import { AVATARS } from "../data/avatarAssets";
+import { supabase } from "../services/supabase";
+import { getProfile, upsertProfile, signOut as supabaseSignOut } from "../services/authService";
 
 export const AuthContext = createContext();
 export default AuthContext;
@@ -222,7 +225,7 @@ const DISCOVERY_PROFILES = [
   {
     id: 2,
     name: "Aiden Fox",
-    photo: "https://randomuser.me/api/portraits/men/32.jpg",
+    photo: AVATARS["zorro-1"],
     age: 24,
     theriotype: "Fox",
     bio: "Astuto y misterioso 🦊",
@@ -234,7 +237,7 @@ const DISCOVERY_PROFILES = [
   {
     id: 3,
     name: "Iris Raven",
-    photo: "https://randomuser.me/api/portraits/women/42.jpg",
+    photo: AVATARS["nyx-raven"],
     age: 26,
     theriotype: "Raven",
     bio: "Sabia y juguetona 🐦",
@@ -246,7 +249,7 @@ const DISCOVERY_PROFILES = [
   {
     id: 4,
     name: "Drake Tiger",
-    photo: "https://randomuser.me/api/portraits/men/45.jpg",
+    photo: AVATARS["lobo-1"],
     age: 28,
     theriotype: "Tiger",
     bio: "Apasionado y protector 🐯",
@@ -258,7 +261,7 @@ const DISCOVERY_PROFILES = [
   {
     id: 5,
     name: "Nova Lynx",
-    photo: "https://randomuser.me/api/portraits/women/47.jpg",
+    photo: AVATARS["lince-1"],
     age: 23,
     theriotype: "Lynx",
     bio: "Elegante y sofisticada 🐆",
@@ -270,7 +273,7 @@ const DISCOVERY_PROFILES = [
   {
     id: 6,
     name: "Sienna Deer",
-    photo: "https://randomuser.me/api/portraits/women/50.jpg",
+    photo: AVATARS["bruna-deer"],
     age: 25,
     theriotype: "Deer",
     bio: "Suave y empatica 🦌",
@@ -283,26 +286,96 @@ const DISCOVERY_PROFILES = [
 
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [hasStoredSession, setHasStoredSession] = useState(false);
+  const [storedAuthUser, setStoredAuthUser] = useState(null);
+  const [newUser, setNewUser] = useState(false);
   const [achievements, setAchievements] = useState([]);
   const [relationshipDays, setRelationshipDays] = useState(0);
   const [discoveryIndex, setDiscoveryIndex] = useState(0);
   const [blockedUsers, setBlockedUsers] = useState([]);
 
-  // Cargar datos persistidos al iniciar
+  // Al abrir: detectar sesión guardada pero NO auto-login (siempre pide auth)
   useEffect(() => {
-    async function restore() {
-      const savedProfile = await loadData(STORAGE_KEYS.USER_PROFILE);
-      if (savedProfile) setUser(savedProfile);
+    async function checkStoredSession() {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session?.user) {
+          setHasStoredSession(true);
+          setStoredAuthUser(session.user);
+        }
+      } catch {}
+      setLoading(false);
+    }
+    checkStoredSession();
+  }, []);
+
+  // Restaurar sesión tras autenticarse con huella (sin re-login con contraseña)
+  const restoreStoredSession = async () => {
+    if (storedAuthUser) {
+      await loadUserProfile(storedAuthUser);
+    }
+  };
+
+  async function loadUserProfile(authUser) {
+    let profile = null;
+
+    // 1. Intentar leer el perfil existente
+    try {
+      profile = await getProfile(authUser.id); // null si no existe (maybeSingle)
+    } catch (e) {
+      console.warn("No se pudo leer el perfil:", e.message);
+    }
+
+    // 2. Si no existe, crearlo (el trigger debería haberlo creado, pero por si falla)
+    if (!profile) {
+      const newProfile = {
+        id: authUser.id,
+        display_name:
+          authUser.user_metadata?.display_name ||
+          authUser.email?.split("@")[0] ||
+          "Nuevo therian",
+        is_premium: false,
+      };
+      try {
+        profile = await upsertProfile(newProfile);
+      } catch (e) {
+        console.warn("No se pudo crear el perfil en DB:", e.message);
+        profile = newProfile; // usar datos locales igual
+      }
+      setNewUser(true);
+    }
+
+    // 3. Siempre loguear al usuario, aunque falle la DB
+    setUser({
+      ...profile,
+      email: authUser.email,
+      supabaseId: authUser.id,
+      avatar: profile.avatar_url || profile.avatar || null,
+      bio: profile.biography || "",
+      isPremium: profile.is_premium || false,
+      photos: profile.photos || [],
+      exclusive_photos: profile.exclusive_photos || [],
+      swipesLeft: profile.is_premium ? 999 : 5,
+      coins: profile.coins ?? 50,
+      gifts: [],
+      mood: "neutral",
+      modsUsed: [],
+    });
+  }
+
+  const setSessionUser = async (authUser) => {
+    if (authUser) await loadUserProfile(authUser);
+  };
+
+  // Persistir bloqueados
+  useEffect(() => {
+    async function restoreBlocked() {
       const savedBlocked = await loadData(STORAGE_KEYS.BLOCKED_USERS);
       if (savedBlocked) setBlockedUsers(savedBlocked);
     }
-    restore();
+    restoreBlocked();
   }, []);
-
-  // Persistir perfil cuando cambia
-  useEffect(() => {
-    if (user) saveData(STORAGE_KEYS.USER_PROFILE, user);
-  }, [user]);
 
   // Persistir bloqueados cuando cambian
   useEffect(() => {
@@ -327,7 +400,7 @@ export function AuthProvider({ children }) {
       id: 1,
       email,
       display_name: "Manu",
-      avatar: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=800",
+      avatar: AVATARS["lobo-1"],
       primary_theriotype: "Wolf",
       species_family: "Canidae",
       age: 26,
@@ -343,7 +416,7 @@ export function AuthProvider({ children }) {
       chatContact: {
         id: 1,
         name: "Luna Wolf",
-        photo: "https://randomuser.me/api/portraits/women/44.jpg",
+        photo: AVATARS["loba-1"],
         isPremium: true,
         mood: "romantic",
         onlineStatus: "active",
@@ -361,8 +434,8 @@ export function AuthProvider({ children }) {
     return true;
   };
 
-  const logout = () => {
-    saveData(STORAGE_KEYS.USER_PROFILE, null);
+  const logout = async () => {
+    await supabaseSignOut().catch(() => {});
     setUser(null);
   };
 
@@ -556,6 +629,13 @@ export function AuthProvider({ children }) {
         nextProfile,
         discoveryIndex,
         discoveryProfiles: DISCOVERY_PROFILES,
+        loading,
+        newUser,
+        setNewUser,
+        hasStoredSession,
+        restoreStoredSession,
+        setSessionUser,
+        swipeProfile,
         recoverPassword,
         blockUser,
         unblockUser,

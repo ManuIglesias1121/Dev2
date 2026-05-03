@@ -1,258 +1,289 @@
 # POLÍTICA DE PRIVACIDAD Y PROTECCIÓN DE DATOS
 
-**Última actualización: Abril 5, 2026**
+**Última actualización: Abril 18, 2026**
+
+---
 
 ## 1. INTRODUCCIÓN
 
 Tu privacidad es nuestra prioridad. Esta Política explica qué datos recopilamos, cómo los protegemos y tus derechos sobre ellos.
 
-**Responsable del Tratamiento de Datos**: [Tu nombre/empresa]
+**Responsable del Tratamiento de Datos:**
+- **Nombre/Razón social**: TherianMatch / [Nombre legal del desarrollador]
+- **CUIT**: [CUIT del responsable]
+- **Domicilio legal**: [Dirección completa, Ciudad, Provincia, Argentina]
+- **Email de contacto**: privacy@therianmatch.app
+- **Teléfono**: [Teléfono de contacto]
+
+Esta Política se rige por la **Ley 25.326 de Protección de los Datos Personales de la República Argentina** y su Decreto Reglamentario 1558/2001. Para usuarios de otros países, también aplicamos los estándares equivalentes de su legislación local.
+
+**La base de datos de usuarios de TherianMatch se encuentra inscripta ante la Agencia de Acceso a la Información Pública (AAIP) bajo el N° de registro: [N° de inscripción AAIP].**
+
+---
 
 ## 2. DATOS QUE RECOPILAMOS
 
 ### 2.1 Datos de Registro
-- Nombre completo
+- Nombre o apodo
 - Email
-- Número de teléfono
-- Fecha de nacimiento
-- Género/Identidad de género
-- Tipo therianthrope
+- Fecha de nacimiento (para verificar mayoría de edad)
+- Género / Identidad de género *(dato sensible — ver sección 2.6)*
 
 ### 2.2 Datos de Perfil
 - Fotos (hasta 10)
 - Biografía
-- Moods
-- Intereses
-- Ubicación aproximada (opcional)
+- Tipo therianthrope *(dato sensible — ver sección 2.6)*
+- Moods e intereses
+- Ubicación aproximada (ciudad — opcional)
 
 ### 2.3 Datos de Comportamiento
-- Mensajes en chat (incluye contenido y timestamp)
-- Perfiles vistos
-- Swipes (like/pass)
-- Gifts enviados/recibidos
+- Mensajes de chat (contenido y timestamp)
+- Perfiles vistos y swipes (like/pass)
+- Regalos enviados/recibidos
 - Planes comprados
-- Clics y navegación en la App
+- Navegación dentro de la App (anonimizado)
 
 ### 2.4 Datos de Dispositivo
-- Tipo de dispositivo
-- Sistema operativo
+- Tipo de dispositivo y sistema operativo
 - Versión de la App
-- ID de dispositivo único
-- Dirección IP
+- ID de dispositivo (para seguridad y notificaciones push)
+- Dirección IP (anonimizada tras 90 días)
 
 ### 2.5 Datos de Pago
-- Últimos 4 dígitos de tarjeta (NO guardamos número completo)
+- Últimos 4 dígitos de tarjeta (NO guardamos el número completo)
 - Nombre del titular
 - Email de facturación
 - Historial de transacciones
 
-### 2.6 Datos Sensibles (PROTEGIDOS MÁXIMO)
-- Fotos de rostro (reconocimiento facial para verificación)
-- Datos biométricos (solo si veririfcas identidad)
-- Datos de salud (si compartes diagnósticos, vacunación)
+Los pagos se procesan mediante Apple App Store, Google Play Store o Stripe. Nosotros **no almacenamos datos completos de tarjeta**.
 
-**Estos datos se encriptan por separado y se almacenan en servidores blindados.**
+### 2.6 Datos Sensibles (Art. 2, Ley 25.326)
+
+Bajo la Ley 25.326, se consideran **datos sensibles** aquellos que revelan origen étnico, opiniones políticas, convicciones religiosas, datos de salud, vida sexual e identidad de género. En nuestra App, los siguientes datos tienen esta categoría:
+
+- **Identidad de género**
+- **Tipo therianthrope** (puede revelar aspectos de identidad personal)
+- **Datos biométricos** (solo si verificás identidad con foto de documento)
+
+Estos datos se tratan con protección reforzada. Al completar tu perfil con esta información **otorgás consentimiento explícito** para su tratamiento. Podés eliminarlos en cualquier momento desde tu perfil.
+
+---
 
 ## 3. CÓMO USAMOS TUS DATOS
 
 ### 3.1 Servicios Esenciales
 - Crear y gestionar tu cuenta
 - Procesar pagos
-- Enviar mensajes
+- Enviar y recibir mensajes
 - Mostrar perfiles compatibles
-- Servicio técnico y soporte
+- Soporte técnico
 
 ### 3.2 Mejora de la App
-- Analizar patrones de uso (anonimizado)
+- Analizar patrones de uso (datos anonimizados)
 - Mejorar algoritmos de matching
 - Detectar y prevenir fraudes
-- Identificar bugs técnicos
+- Identificar errores técnicos
 
 ### 3.3 Comunicación
-- Notificaciones sobre nuevos mensajes
-- Recordatorios de ofertas limitadas
+- Notificaciones sobre nuevos mensajes y matches
 - Actualizaciones de seguridad
-- Cambios a Términos/Privacidad
+- Cambios en Términos o Privacidad
 
-### 3.4 Marketing (SOLO CON CONSENTIMIENTO)
+### 3.4 Marketing (SOLO CON CONSENTIMIENTO EXPLÍCITO)
 - Promociones de planes
-- Nuevo contenido de la App
-- Encuestas opcional de satisfacción
+- Novedades de la App
+- Encuestas opcionales de satisfacción
 
-**Puedes optar por NO recibir marketing en cualquier momento.**
+**Podés retirar tu consentimiento de marketing en cualquier momento desde Configuración → Notificaciones.**
+
+---
 
 ## 4. DATOS COMPARTIDOS CON TERCEROS
 
-### 4.1 Compartimos SOLO cuando necesario con:
+Compartimos datos únicamente cuando es necesario para operar la App:
 
-**Proveedores de Pago** (Stripe, Apple Pay, Google Pay)
-- Datos: Últimos 4 dígitos, email
-- Propósito: Procesar pagos
-- Protección: Encriptación de punta a punta
+| Proveedor | Datos compartidos | Propósito | Protección |
+|-----------|------------------|-----------|------------|
+| **Apple / Google Play** | Email, historial de compras | Procesar pagos | Cumplimiento PCI DSS |
+| **Stripe** | Últimos 4 dígitos, email | Procesar pagos | Encriptación extremo a extremo |
+| **AWS / Google Cloud** | Contenido encriptado | Almacenamiento | Cumplimiento estándares internacionales |
+| **Firebase** | Eventos anonimizados | Analítica y notificaciones push | Sin datos identificables |
+| **Autoridades legales** | Lo requerido por orden judicial | Cumplimiento legal | Solo con orden judicial válida |
 
-**Proveedores de Cloud** (AWS, Google Cloud)
-- Datos: Contenido y metadatos (encriptados)
-- Propósito: Almacenamiento seguro
-- Protección: Cumplimiento GDPR/CCPA
-
-**Análitica** (Firebase, Mixpanel - anonimizado)
-- Datos: Eventos de uso (NO datos personales)
-- Propósito: Entender uso de la App
-- Protección: Datos anonimizados, IP oculta
-
-**Autoridades Legales** (COMO ÚLTIMO RECURSO)
-- Solo si hay orden judicial válida
-- Te notificaremos salvo prohibición legal
-
-### 4.2 NO Compartimos:
-- ❌ Mensajes privados
-- ❌ Fotos a redes sociales (salvo tú las publiques)
-- ❌ Datos de pago completos
+### NO compartimos:
+- ❌ Mensajes privados con terceros
+- ❌ Fotos a redes sociales sin tu acción
+- ❌ Datos completos de pago
 - ❌ Datos a anunciantes o brokers de datos
-- ❌ Información a otras apps/servicios
+- ❌ Información a otras apps o servicios
 
-## 5. CIFRADO Y SEGURIDAD
+Todos los proveedores tienen firmados **Acuerdos de Tratamiento de Datos (DPA)** que los obligan a usar los datos solo para los fines especificados y a cumplir con los estándares de seguridad requeridos.
 
-### 5.1 Medidas Técnicas Implementadas
+---
 
-**En Tránsito**:
-- Protocolo HTTPS/SSL 1.3 (encriptación máxima)
+## 5. TRANSFERENCIA INTERNACIONAL DE DATOS
+
+Algunos de nuestros proveedores (AWS, Google Cloud, Stripe, Firebase) operan en servidores fuera de Argentina.
+
+De acuerdo con el **Art. 12 de la Ley 25.326**, la transferencia de datos a países u organismos internacionales que no proporcionen niveles adecuados de protección está prohibida. Por eso:
+
+- Solo transferimos datos a proveedores ubicados en países o bajo certificaciones con nivel de protección adecuado (Estados Unidos bajo Privacy Shield / SCCs, Unión Europea, etc.)
+- Todos los datos transferidos viajan **encriptados**
+- Los contratos con proveedores incluyen cláusulas de protección equivalente a las exigidas por la Ley 25.326
+
+---
+
+## 6. CIFRADO Y SEGURIDAD
+
+### 6.1 Medidas Técnicas
+
+**En tránsito:**
+- HTTPS/TLS 1.3
 - Perfect Forward Secrecy (PFS)
-- Certificados EV (Entity Validation) de 256-bit
 
-**En Reposo**:
+**En reposo:**
 - AES-256 para datos sensibles
-- bcrypt para contraseñas (salt + 12 rounds)
-- Tokens encriptados para sesiones
+- bcrypt (12 rounds) para contraseñas
+- Tokens de sesión encriptados
 
-**En Dispositivo**:
-- Keychain (iOS) para almacenar tokens
+**En dispositivo:**
+- Keychain (iOS) para tokens
 - Keystore (Android) para datos sensibles
 
-### 5.2 Medidas Administrativas
+### 6.2 Medidas Administrativas
 
-- **Acceso Restringido**: Solo personal necesario accede a datos
-- **NDA Obligatorio**: Empleados firman confidencialidad
-- **Auditorías Regulares**: Trimestral por terceros independientes
-- **Monitoreo 24/7**: Detección de accesos inusuales
-- **Backup Encriptado**: Recoverabilidad sin comprometer seguridad
+- Acceso restringido: solo personal con necesidad operativa
+- NDA obligatorio para empleados con acceso a datos
+- Auditorías de seguridad periódicas
+- Monitoreo continuo de accesos inusuales
 
-### 5.3 Planes de Respuesta a Incidentes
+### 6.3 Respuesta a Incidentes de Seguridad
 
-Si detectamos una brecha:
-1. Contención inmediata (máx 2 horas)
+Si detectamos una brecha de seguridad que afecte tus datos:
+1. Contención inmediata (máximo 2 horas)
 2. Investigación interna
-3. Notificación a usuarios afectados (máx 72 horas)
-4. Reporte a autoridades si es requerido
+3. Notificación a los usuarios afectados en un **máximo de 72 horas**
+4. Reporte a la **AAIP** conforme al Art. 11 de la Resolución 47/2018
 
-## 6. RETENCIÓN DE DATOS
+---
 
-| Tipo de Dato | Retención | Razón |
+## 7. RETENCIÓN DE DATOS
+
+| Tipo de dato | Período de retención | Qué pasa al vencer |
 |---|---|---|
-| Perfil activo | Mientras usas | Funcionalidad |
-| Mensajes archivados | 1 año después cierre | Recuperación |
-| Fotos de perfil | Hasta eliminación | Funcionalidad |
-| Datos de pago | 7 años | Legal (impuestos) |
-| Logs de acceso | 90 días | Seguridad |
-| Datos de dispositivo | 30 días | Análisis |
+| Perfil activo | Mientras usás la App | Se anonimiza a los 30 días del cierre |
+| Fotos de perfil | Hasta eliminación | Se eliminan en 30 días |
+| Mensajes | 1 año desde envío | Se eliminan permanentemente |
+| Datos de pago | 7 años | Requerimiento legal impositivo (AFIP) |
+| Logs de acceso | 90 días | Se eliminan automáticamente |
+| Datos de dispositivo | 30 días | Se eliminan automáticamente |
+| Fecha de nacimiento | 7 años post-cierre | Verificación de edad legal |
 
-**Después del plazo, los datos se borran permanentemente o se anonimizar.**
+Los datos se borran permanentemente o se anonimizan al vencer el plazo.
 
-## 7. TUS DERECHOS
+---
 
-Tienes derecho a:
+## 8. TUS DERECHOS (Ley 25.326, Arts. 14–16)
 
-**7.1 Acceso**: Ver todos los datos que tenemos de ti
-- Solicita: "Envíame una copia de mis datos"
+Tenés derecho a:
+
+### 8.1 Acceso (Art. 14)
+Ver todos los datos que tenemos sobre vos.
+- Solicitá: privacy@therianmatch.app
+- Plazo de respuesta: **30 días corridos**
+- Sin costo
+
+### 8.2 Rectificación (Art. 16)
+Actualizar datos incorrectos o desactualizados.
+- Directamente desde tu perfil en la App
+- O contactando: privacy@therianmatch.app
+
+### 8.3 Supresión ("Derecho al Olvido") (Art. 16)
+Solicitar la eliminación de tus datos.
+- Procesamos en **30 días**
+- Excepto datos legalmente requeridos (impuestos, seguridad)
+- No recuperable una vez ejecutado
+
+### 8.4 Portabilidad
+Descargar una copia de tus datos en formato JSON/CSV.
+- Solicitá desde: Configuración → Exportar mis datos
 - Plazo: 30 días
-- Gratis
 
-**7.2 Corrección**: Actualizar datos incorrectos
-- Hazlo directamente en tu Perfil
-- Si no puedes: Contacta a legal@therianthrope-dating.com
+### 8.5 Oposición
+- Optar por no recibir marketing en cualquier momento
+- Optar por no participar en analítica desde Configuración
 
-**7.3 Eliminación** ("Right to be Forgotten")
-- Podemos borrar todo en 30 días
-- Excepto: Datos legalmente requeridos (impuestos)
-- IMPORTANTE: No recuperable tras eliminación
+### 8.6 Cómo ejercer tus derechos
+Enviá un email a **privacy@therianmatch.app** con:
+- Asunto: [Tipo de solicitud] + tu email de cuenta
+- Descripción de lo que solicitás
 
-**7.4 Portabilidad**: Descargar tus datos
-- Formato: JSON/CSV
-- Incluye: Perfil, mensajes*, fotos* (*hasta 10GB)
-- Plazo: 30 días
+Respondemos dentro de los **30 días corridos**. Si la respuesta no te satisface, podés recurrir a la **AAIP**.
 
-**7.5 Restricción de Procesamiento**
-- Pausar uso de datos sin eliminar
-- Ej: No quiero recomendaciones, solo chat
+---
 
-**7.6 Oposición**
-- Optar por NO recibir marketing
-- Optar por NO participar en análitica
+## 9. EDAD Y MENORES
 
-## 8. EDAD Y MENORES
+9.1 Esta App es **solo para mayores de 18 años**.
 
-8.1 **Mínimo 18 años**: Esta App es solo para mayores de 18.
+9.2 Verificamos la edad mediante validación de fecha de nacimiento al registrarse.
 
-8.2 **Verificación**: Usamos:
-- Validación de fecha de nacimiento
-- Verificación de rostro (opcional)
-- Validación de email/teléfono
+9.3 Si detectamos que un usuario es menor de edad:
+- Eliminamos la cuenta de inmediato
+- No retenemos los datos
+- Reportamos a las autoridades si corresponde bajo la **Ley 26.904 (Grooming)**
 
-8.3 **Si detectamos menor**:
-- Eliminamos cuenta inmediatamente
-- No retenemos datos
-- Notificamos a padres si es identificable
+---
 
-## 9. COOKIES Y RASTREO
+## 10. COOKIES Y TECNOLOGÍAS DE SEGUIMIENTO
 
-### 9.1 Cookies que Usamos
+La App utiliza tecnologías equivalentes a cookies para:
 
-| Cookie | Propósito | Duración |
+| Tecnología | Propósito | Duración |
 |---|---|---|
-| sessionToken | Mantener tu sesión abierta | 90 días |
-| preferences | Recordar tus preferencias | 1 año |
-| analytics | Entender cómo usas la App | 6 meses |
+| Token de sesión | Mantener tu sesión | 90 días |
+| Preferencias | Recordar ajustes | 1 año |
+| Analytics (Firebase) | Analítica anonimizada | 6 meses |
 
-### 9.2 Puedes Controlar:
-- Borra Cookies: Configuración > Privacidad > Limpiar datos
-- No rastreamos entre apps de terceros
-- Respetamos "Do Not Track" de tu navegador
+Podés borrar estos datos desde: **Configuración → Privacidad → Limpiar datos locales**.
 
-## 10. TRANSFERENCIAS INTERNACIONALES
-
-10.1 **Almacenamiento**: Servidores en [TU PAÍS] principalmente
-
-10.2 **Si transferimos datos internacionalmente**:
-- Cumplimos con Privacy Shield / SCCs (Standard Contractual Clauses)
-- Nivel de protección equivalente
+---
 
 ## 11. CAMBIOS A ESTA POLÍTICA
 
 11.1 Actualizaremos esta Política según sea necesario.
 
-11.2 Cambios materiales requieren:
-- Notificación previa por email
-- 14 días para revisar
-- Opción de rechazar (eliminar cuenta)
-
-## 12. CONTACTO
-
-**Oficial de Privacidad (Data Protection Officer)**:
-- Email: privacy@therianthrope-dating.com
-- Teléfono: [Tu teléfono]
-- Dirección para envíos: [Tu dirección legal]
-
-**Para Reclamos sobre Privacidad**:
-- Primero: Contacta al DPO (resuelve en 21 días)
-- Luego: Escalación a autoridad regulatoria de tu país
+11.2 Los cambios materiales requieren:
+- Notificación previa por email con **14 días de anticipación**
+- Posibilidad de rechazar eliminando tu cuenta
+- El uso continuado implica aceptación
 
 ---
 
-**RESUMEN EJECUTIVO PARA USUARIOS**
+## 12. CONTACTO Y RECLAMOS
 
-✅ **Protegemos**: Encriptación máxima + acceso restringido
-❌ **No hacemos**: Vender datos, rastrear entre apps, compartir con anunciantes
-🔐 **Tu control**: Descarga, borra, opina sobre marketing en cualquier momento
-📋 **Transparencia**: Acceso a toda información personal en <30 días
+**Oficial de Protección de Datos (DPO):**
+- Email: privacy@therianmatch.app
+- Teléfono: [Teléfono de contacto]
+- Domicilio: [Dirección legal, Ciudad, Argentina]
 
-**Si tienes dudas, pregunta. Tu privacidad es sagrada.**
+**Plazo de respuesta:** 30 días corridos desde la recepción de tu solicitud.
+
+**Si no quedás satisfecho con nuestra respuesta**, podés presentar una denuncia ante la autoridad de control:
+
+**Agencia de Acceso a la Información Pública (AAIP)**
+- Web: [aaip.gob.ar](https://www.aaip.gob.ar)
+- Email: infopublica@aaip.gob.ar
+- Av. Pte. Gral. Julio A. Roca 710, Piso 2 — CABA, Argentina
+
+---
+
+## RESUMEN PARA USUARIOS
+
+✅ **Protegemos** tus datos con encriptación y acceso restringido
+❌ **No vendemos** datos, no rastreamos entre apps, no compartimos con anunciantes
+🔐 **Vos tenés el control**: descargá, corregí o eliminá tus datos cuando quieras
+📋 **Transparencia**: acceso a toda tu información personal en menos de 30 días
+🇦🇷 **Ley aplicable**: Ley 25.326 de Protección de Datos Personales (Argentina)
+
+**¿Dudas? Escribinos a privacy@therianmatch.app**

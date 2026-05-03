@@ -1,7 +1,8 @@
 import React, { useRef, useEffect } from "react";
-import { Image, StyleSheet, View, Animated } from "react-native";
+import { Image, StyleSheet, View, Animated, Text } from "react-native";
+import { LinearGradient } from "expo-linear-gradient";
 
-export default function PolaroidFrame({ source, name, isPremium }) {
+export default function PolaroidFrame({ source, name, isPremium, bio }) {
   // Animación de glow para premium
   const glowAnim = useRef(new Animated.Value(0)).current;
 
@@ -47,6 +48,14 @@ export default function PolaroidFrame({ source, name, isPremium }) {
     <Animated.View style={[styles.frame, animatedStyle]}>
       <View style={styles.innerFrame}>
         <Image source={source} style={styles.photo} />
+        {bio ? (
+          <LinearGradient
+            colors={["transparent", "rgba(0,0,0,0.75)"]}
+            style={styles.bioOverlay}
+          >
+            <Text style={styles.bioText} numberOfLines={2}>{bio}</Text>
+          </LinearGradient>
+        ) : null}
       </View>
       <View style={styles.nameContainer} pointerEvents="none">
         <Animated.Text style={styles.nameText}>{name}</Animated.Text>
@@ -90,6 +99,26 @@ const styles = StyleSheet.create({
     height: '100%',
     resizeMode: 'cover',
     borderRadius: 10,
+  },
+  bioOverlay: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    paddingHorizontal: 12,
+    paddingTop: 24,
+    paddingBottom: 10,
+    borderBottomLeftRadius: 10,
+    borderBottomRightRadius: 10,
+  },
+  bioText: {
+    fontFamily: 'Satisfy_400Regular',
+    fontSize: 16,
+    color: '#fff',
+    textAlign: 'center',
+    textShadowColor: 'rgba(0,0,0,0.6)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 4,
   },
   nameContainer: {
     width: '100%',

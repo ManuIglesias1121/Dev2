@@ -1,12 +1,42 @@
 import { Ionicons } from "@expo/vector-icons";
-import React, { useState } from "react";
-import { Image, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
-import { useAuth } from "../contexts/AuthContext";
+import React, { useState, useCallback } from "react";
+import { Alert, Image, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { useFocusEffect } from "@react-navigation/native";
+import { loadData, saveData, STORAGE_KEYS } from "../services/storageService";
 import { fakeSuperMatches } from "../data/fakeSuperMatches";
 
+function resolveSource(img) {
+  if (!img) return require("../../assets/logo1.png");
+  return typeof img === "string" ? { uri: img } : img;
+}
+
 export default function SuperMatchInbox({ navigation }) {
-  const { user } = useAuth();
-  const [superMatches] = useState(fakeSuperMatches);
+  const [superMatches, setSuperMatches] = useState(fakeSuperMatches);
+
+  useFocusEffect(
+    useCallback(() => {
+      async function load() {
+        const saved = await loadData(STORAGE_KEYS.CHAT_CONTACTS + "_supermatches", []);
+        setSuperMatches([...saved, ...fakeSuperMatches]);
+      }
+      load();
+    }, [])
+  );
+
+  const deleteSuperMatch = (id) => {
+    Alert.alert("Eliminar Super Match", "¿Quieres eliminar este Super Match?", [
+      { text: "Cancelar", style: "cancel" },
+      {
+        text: "Eliminar", style: "destructive",
+        onPress: async () => {
+          const updated = superMatches.filter((m) => m.id !== id);
+          setSuperMatches(updated);
+          const savedOnly = updated.filter((m) => !fakeSuperMatches.find((f) => f.id === m.id));
+          await saveData(STORAGE_KEYS.CHAT_CONTACTS + "_supermatches", savedOnly);
+        },
+      },
+    ]);
+  };
 
   const handleBack = () => {
     if (navigation.canGoBack()) {
@@ -35,13 +65,10 @@ export default function SuperMatchInbox({ navigation }) {
         <TouchableOpacity
           key={item.id}
           style={styles.card}
-          onPress={() =>
-            navigation.navigate("SuperMatchDetail", {
-              match: item,
-            })
-          }
+          onPress={() => navigation.navigate("SuperMatchDetail", { match: item })}
+          onLongPress={() => deleteSuperMatch(item.id)}
         >
-          <Image source={{ uri: item.sender.avatar }} style={styles.avatar} />
+          <Image source={resolveSource(item.sender.avatar)} style={styles.avatar} />
 
           <View style={{ flex: 1 }}>
             <Text style={styles.name}>{item.sender.display_name}</Text>

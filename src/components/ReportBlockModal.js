@@ -139,7 +139,7 @@ export default function ReportBlockModal({ visible, onClose, profile }) {
                 {profile?.display_name}
               </Text>
               <Text style={{ color: "#666", fontSize: 14, marginBottom: 20 }}>
-                ¿Qué querés hacer?
+                ¿Qué quieres hacer?
               </Text>
 
               <TouchableOpacity

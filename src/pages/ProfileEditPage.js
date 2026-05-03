@@ -1,6 +1,8 @@
 import { LinearGradient } from "expo-linear-gradient";
 import * as ImagePicker from "expo-image-picker";
 import React, { useState, useContext } from "react";
+import { getCurrentLocation, reverseGeocode } from "../services/locationService";
+import { uploadAvatar } from "../services/photoService";
 import {
   Alert,
   Animated,
@@ -80,6 +82,22 @@ export default function ProfileEditPage({ navigation }) {
   const [biography, setBiography] = useState(user?.biography ?? user?.bio ?? "");
   const [age, setAge] = useState(user?.age ? String(user.age) : "");
   const [city, setCity] = useState(user?.city ?? "");
+  const [detectingCity, setDetectingCity] = useState(false);
+
+  const detectCity = async () => {
+    setDetectingCity(true);
+    try {
+      const loc = await getCurrentLocation();
+      if (!loc) { Alert.alert("Sin permiso", "Activa la ubicación en ajustes."); return; }
+      const geo = await reverseGeocode(loc.latitude, loc.longitude);
+      if (geo?.city) setCity(geo.city);
+      else Alert.alert("Error", "No pudimos detectar la ciudad.");
+    } catch {
+      Alert.alert("Error", "No pudimos obtener la ubicación.");
+    } finally {
+      setDetectingCity(false);
+    }
+  };
   const [theriotype, setTheriotype] = useState(user?.primary_theriotype ?? "");
   const [speciesFamily, setSpeciesFamily] = useState(user?.species_family ?? "");
   const [habitat, setHabitat] = useState(user?.habitat ?? "");
@@ -99,9 +117,8 @@ export default function ProfileEditPage({ navigation }) {
       return;
     }
     const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      allowsEditing: true,
-      aspect: [1, 1],
+      mediaTypes: ["images"],
+      allowsEditing: false,
       quality: 0.8,
     });
     if (!result.canceled && result.assets?.[0]?.uri) {
@@ -121,9 +138,19 @@ export default function ProfileEditPage({ navigation }) {
     }
 
     setSaving(true);
-    await new Promise((r) => setTimeout(r, 600));
 
-    updateUser({
+    // Subir avatar si es un archivo local nuevo
+    let avatarUrl = avatar;
+    if (typeof avatar === "string" && avatar.startsWith("file://")) {
+      try {
+        avatarUrl = await uploadAvatar(user.supabaseId, avatar);
+      } catch (e) {
+        console.warn("Error subiendo avatar:", e.message);
+        avatarUrl = user?.avatar || null; // mantener el anterior si falla
+      }
+    }
+
+    const updatedData = {
       display_name: displayName.trim(),
       biography: biography.trim(),
       bio: biography.trim(),
@@ -133,8 +160,31 @@ export default function ProfileEditPage({ navigation }) {
       species_family: speciesFamily,
       habitat,
       pack_role: packRole,
-      avatar,
-    });
+      avatar: avatarUrl,
+      avatar_url: avatarUrl,
+    };
+
+    try {
+      const { supabase } = require("../services/supabase");
+      await supabase
+        .from("profiles")
+        .update({
+          display_name: updatedData.display_name,
+          biography: updatedData.biography,
+          age: updatedData.age,
+          city: updatedData.city,
+          primary_theriotype: updatedData.primary_theriotype,
+          species_family: updatedData.species_family,
+          habitat: updatedData.habitat,
+          pack_role: updatedData.pack_role,
+          avatar_url: avatarUrl,
+        })
+        .eq("id", user?.supabaseId);
+    } catch (e) {
+      console.warn("Error guardando en Supabase:", e.message);
+    }
+
+    updateUser(updatedData);
 
     setSaving(false);
     Alert.alert("¡Guardado!", "Tu perfil fue actualizado.", [
@@ -166,7 +216,7 @@ export default function ProfileEditPage({ navigation }) {
             }}>
               {avatar
                 ? <Image source={{ uri: avatar }} style={{ width: "100%", height: "100%" }} />
-                : <Text style={{ fontSize: 48 }}>🐾</Text>
+                : <Text style={{ fontSize: 48 }}>📷</Text>
               }
             </View>
             <View style={{
@@ -226,14 +276,23 @@ export default function ProfileEditPage({ navigation }) {
             </View>
             <View style={{ flex: 2 }}>
               <Field label="Ciudad">
-                <TextInput
-                  value={city}
-                  onChangeText={setCity}
-                  style={inputStyle}
-                  placeholderTextColor="#555"
-                  placeholder="Tu ciudad"
-                  maxLength={50}
-                />
+                <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+                  <TextInput
+                    value={city}
+                    onChangeText={setCity}
+                    style={[inputStyle, { flex: 1 }]}
+                    placeholderTextColor="#555"
+                    placeholder="Tu ciudad"
+                    maxLength={50}
+                  />
+                  <TouchableOpacity
+                    onPress={detectCity}
+                    disabled={detectingCity}
+                    style={{ backgroundColor: "#1a1a1a", borderWidth: 1, borderColor: "#333", borderRadius: 10, padding: 10 }}
+                  >
+                    <Ionicons name={detectingCity ? "sync" : "location-outline"} size={20} color="#22c55e" />
+                  </TouchableOpacity>
+                </View>
               </Field>
             </View>
           </View>

@@ -1,48 +1,90 @@
-// src/pages/GalleryPage.js
-
 import { useNavigation, useRoute } from "@react-navigation/native";
-import React from "react";
-import { Text, TouchableOpacity, View } from "react-native";
-import ImageViewer from "react-native-image-zoom-viewer";
+import React, { useState } from "react";
+import {
+  Dimensions,
+  FlatList,
+  Image,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from "react-native";
+
+const { width, height } = Dimensions.get("window");
+
+function resolveSource(img) {
+  if (!img) return null;
+  return typeof img === "string" ? { uri: img } : img;
+}
 
 export default function GalleryPage() {
   const navigation = useNavigation();
   const route = useRoute();
-  const { photos } = route.params;
-
-  // Convertir photos a formato para ImageViewer
-  const images = photos.map((url) => ({ url }));
+  const { photos, initialIndex = 0 } = route.params;
+  const [currentIndex, setCurrentIndex] = useState(initialIndex);
 
   return (
-    <View style={{ flex: 1, backgroundColor: "black" }}>
-      
-      {/* Botón de cerrar */}
-      <TouchableOpacity
-        onPress={() => navigation.goBack()}
-        style={{
-          position: "absolute",
-          bottom: 40,
-          left: 20,
-          zIndex: 10,
-          padding: 10,
-          backgroundColor: "rgba(0,0,0,0.5)",
-          borderRadius: 20,
-          justifyContent: "center",
-          alignItems: "center",
+    <View style={styles.container}>
+      <FlatList
+        data={photos}
+        keyExtractor={(_, i) => String(i)}
+        horizontal
+        pagingEnabled
+        showsHorizontalScrollIndicator={false}
+        initialScrollIndex={initialIndex}
+        getItemLayout={(_, index) => ({ length: width, offset: width * index, index })}
+        onMomentumScrollEnd={(e) => {
+          const idx = Math.round(e.nativeEvent.contentOffset.x / width);
+          setCurrentIndex(idx);
         }}
-      >
-        <Text style={{ color: "#22c55e", fontSize: 32, fontWeight: "bold" }}>←</Text>
-      </TouchableOpacity>
-
-      {/* Galería con zoom */}
-      <ImageViewer
-        imageUrls={images}
-        index={0}
-        enableSwipeDown={true}
-        onSwipeDown={() => navigation.goBack()}
-        backgroundColor="black"
-        renderIndicator={() => null} // Quitar indicadores si no los quieres
+        renderItem={({ item }) => (
+          <View style={styles.slide}>
+            <Image
+              source={resolveSource(item)}
+              style={styles.image}
+              resizeMode="contain"
+            />
+          </View>
+        )}
       />
+
+      {/* Contador */}
+      <View style={styles.counter}>
+        <Text style={styles.counterText}>{currentIndex + 1} / {photos.length}</Text>
+      </View>
+
+      {/* Botón cerrar */}
+      <TouchableOpacity style={styles.closeBtn} onPress={() => navigation.goBack()}>
+        <Text style={styles.closeText}>✕</Text>
+      </TouchableOpacity>
     </View>
   );
 }
+
+const styles = StyleSheet.create({
+  container: { flex: 1, backgroundColor: "black" },
+  slide: { width, height, justifyContent: "center", alignItems: "center" },
+  image: { width, height },
+  counter: {
+    position: "absolute",
+    top: 56,
+    alignSelf: "center",
+    backgroundColor: "rgba(0,0,0,0.5)",
+    paddingHorizontal: 14,
+    paddingVertical: 6,
+    borderRadius: 20,
+  },
+  counterText: { color: "white", fontSize: 14 },
+  closeBtn: {
+    position: "absolute",
+    top: 50,
+    right: 20,
+    backgroundColor: "rgba(0,0,0,0.6)",
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  closeText: { color: "white", fontSize: 18, fontWeight: "bold" },
+});

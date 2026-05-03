@@ -1,6 +1,7 @@
 import { LinearGradient } from "expo-linear-gradient";
 import React, { useEffect, useRef, useState } from "react";
 import {
+    Alert,
     Animated,
     ScrollView,
     StyleSheet,
@@ -42,7 +43,7 @@ const premiumBenefits = [
   { id: "filters", icon: "🔎", title: "Filtros avanzados", desc: "Filtrá por theriotype, hábitat, rol y más." },
   { id: "invisible", icon: "🕵️", title: "Modo invisible", desc: "Navegá sin ser visto hasta que elijas salir." },
   { id: "passport", icon: "📍", title: "Passport", desc: "Cambia tu ubicación para buscar en otra manada." },
-  { id: "rewind", icon: "🔄", title: "Rewind swipe", desc: "Deshacé el último swipe por error." },
+  { id: "rewind", icon: "🔄", title: "Rewind swipe", desc: "Deshaz el último swipe por error." },
   { id: "badge", icon: "👑", title: "Badge premium", desc: "Tu perfil brilla con un distintivo exclusivo." },
   { id: "events", icon: "🎟️", title: "Eventos exclusivos", desc: "Accedé a encuentros y desafíos especiales." },
 ];
@@ -72,12 +73,13 @@ export default function PremiumPage({ navigation }) {
 
   const handleUpgrade = () => {
     const plan = plans.find((item) => item.id === selectedPlan);
-    if (!plan) {
-      alert("Seleccioná un plan premium primero.");
-      return;
-    }
-
+    if (!plan) return;
     activatePremium(plan.id);
+    Alert.alert(
+      "¡Bienvenido a la manada premium! 👑",
+      `Plan ${plan.title} activado en modo demo.`,
+      [{ text: "OK" }]
+    );
   };
 
   return (
@@ -144,9 +146,11 @@ export default function PremiumPage({ navigation }) {
           </TouchableOpacity>
 
           {/* CERRAR */}
-          <TouchableOpacity onPress={() => navigation.goBack()}>
-            <Text style={styles.close}>Volver</Text>
-          </TouchableOpacity>
+          {navigation?.canGoBack?.() && (
+            <TouchableOpacity onPress={() => navigation.goBack()}>
+              <Text style={styles.close}>Volver</Text>
+            </TouchableOpacity>
+          )}
         </Animated.View>
       </ScrollView>
     </LinearGradient>

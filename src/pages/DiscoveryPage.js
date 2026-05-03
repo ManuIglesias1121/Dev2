@@ -127,7 +127,7 @@ export default function DiscoveryPage() {
           {...panResponder.panHandlers}
         >
           <Image
-            source={{ uri: currentProfile.photo }}
+            source={typeof currentProfile.photo === "string" ? { uri: currentProfile.photo } : currentProfile.photo}
             style={styles.cardImage}
           />
 

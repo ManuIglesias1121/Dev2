@@ -1,14 +1,14 @@
+import { Platform } from "react-native";
+
 let Notifications = null;
-let Device = null;
 
 async function getModules() {
-  if (Notifications && Device) return { Notifications, Device };
+  if (Notifications) return { Notifications };
   try {
     Notifications = await import("expo-notifications");
-    Device = await import("expo-device");
-    return { Notifications, Device };
+    return { Notifications };
   } catch {
-    return { Notifications: null, Device: null };
+    return { Notifications: null };
   }
 }
 
@@ -29,10 +29,10 @@ export async function setupNotifications() {
 }
 
 export async function registerForPushNotificationsAsync() {
-  const { Notifications: N, Device: D } = await getModules();
-  if (!N || !D) return null;
+  const { Notifications: N } = await getModules();
+  if (!N) return null;
 
-  if (!D.isDevice) return null;
+  if (Platform.OS === "web") return null;
 
   const { status: existing } = await N.getPermissionsAsync();
   let finalStatus = existing;

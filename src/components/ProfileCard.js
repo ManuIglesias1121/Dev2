@@ -2,6 +2,11 @@ import React from "react";
 import { Image, StyleSheet, Text, View } from "react-native";
 import PolaroidFrame from "./PolaroidFrame"; // ← IMPORTANTE
 
+function resolveSource(img) {
+  if (!img) return require("../../assets/logo1.png");
+  return typeof img === "string" ? { uri: img } : img;
+}
+
 export default function ProfileCard({ profile }) {
   if (!profile) return null;
   // Detectar si es premium (por ahora, si tiene isPremium true)
@@ -11,22 +16,11 @@ export default function ProfileCard({ profile }) {
     <View style={styles.card}>
       {/* FOTO PRINCIPAL EN POLAROID */}
       <PolaroidFrame
-        source={
-          profile.photos?.[0]
-            ? { uri: profile.photos[0] }
-            : profile.avatar
-            ? { uri: profile.avatar }
-            : require("../../assets/logo1.png")
-        }
+        source={resolveSource(profile.photos?.[0] || profile.avatar)}
         name={profile.display_name || profile.name || "Sin nombre"}
         isPremium={isPremium}
+        bio={profile.biography || profile.bio}
       />
-      {/* BIO */}
-      {(profile.biography || profile.bio) && (
-        <Text style={styles.bioDancing} numberOfLines={4}>
-          {profile.biography || profile.bio}
-        </Text>
-      )}
     </View>
   );
 }

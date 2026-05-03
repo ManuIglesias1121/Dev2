@@ -2,6 +2,11 @@ import { Ionicons } from "@expo/vector-icons";
 import React from "react";
 import { View, Text, Image, StyleSheet, TouchableOpacity, ScrollView } from "react-native";
 
+function resolveSource(img) {
+  if (!img) return require("../../assets/logo1.png");
+  return typeof img === "string" ? { uri: img } : img;
+}
+
 const gifts = [
   { id: 1, name: "👁️ Ver Visitantes", price: 1, feature: "Ver quién te visitó", duration: "24 horas" },
   { id: 2, name: "💎 Super Like", price: 1, feature: "Super Like ilimitado", duration: "12 horas" },
@@ -54,7 +59,18 @@ export default function SuperMatchDetail({ route, navigation }) {
         <View style={styles.headerSpacer} />
       </View>
       <Text style={styles.superTitle}>¡Te han dado un Super Like!</Text>
-      <Image source={{ uri: match.sender.avatar }} style={styles.avatar} />
+      <TouchableOpacity
+        onPress={() => {
+          const photos = match.sender.photos?.length > 0 ? match.sender.photos : (match.sender.avatar ? [match.sender.avatar] : []);
+          if (photos.length > 0) navigation.navigate("GalleryPage", { photos, initialIndex: 0 });
+        }}
+        activeOpacity={0.85}
+      >
+        <Image source={resolveSource(match.sender.avatar)} style={styles.avatar} />
+        <View style={{ position: "absolute", bottom: 8, right: 4, backgroundColor: "rgba(0,0,0,0.6)", borderRadius: 10, padding: 4 }}>
+          <Ionicons name="images-outline" size={14} color="white" />
+        </View>
+      </TouchableOpacity>
       <Text style={styles.name}>{match.sender.display_name}</Text>
       <Text style={styles.type}>{match.sender.primary_theriotype}</Text>
       <Text style={styles.stars}>✨✨✨</Text>
@@ -160,7 +176,7 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   giftBtn: {
-    backgroundColor: 'linear-gradient(90deg, #16a34a 0%, #22d3ee 100%)',
+    backgroundColor: '#16a34a',
     borderRadius: 16,
     paddingVertical: 18,
     paddingHorizontal: 18,
@@ -192,7 +208,7 @@ const styles = StyleSheet.create({
     textShadowRadius: 4,
   },
   chatBtn: {
-    backgroundColor: 'linear-gradient(90deg, #22d3ee 0%, #16a34a 100%)',
+    backgroundColor: '#22c55e',
     borderRadius: 30,
     paddingVertical: 18,
     paddingHorizontal: 60,
