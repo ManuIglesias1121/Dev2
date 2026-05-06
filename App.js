@@ -5,6 +5,7 @@ import { useFonts, Satisfy_400Regular } from "@expo-google-fonts/satisfy";
 import { AuthProvider } from "./src/contexts/AuthContext";
 import RootNavigator from "./src/navigation/RootNavigator";
 import { setupNotifications } from "./src/services/notificationService";
+import SafetyOnboardingModal from "./src/components/SafetyOnboardingModal";
 
 export default function App() {
   const notifListener = useRef();
@@ -35,6 +36,7 @@ export default function App() {
     <SafeAreaProvider>
       <AuthProvider>
         <RootNavigator />
+        <SafetyOnboardingModal />
       </AuthProvider>
     </SafeAreaProvider>
   );

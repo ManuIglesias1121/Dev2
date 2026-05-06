@@ -1,6 +1,6 @@
 # POLÍTICA DE PRIVACIDAD Y PROTECCIÓN DE DATOS
 
-**Última actualización: Abril 18, 2026**
+**Última actualización: Mayo 3, 2026**
 
 ---
 
@@ -30,7 +30,8 @@ Esta Política se rige por la **Ley 25.326 de Protección de los Datos Personale
 - Género / Identidad de género *(dato sensible — ver sección 2.6)*
 
 ### 2.2 Datos de Perfil
-- Fotos (hasta 10)
+- **Fotos públicas** (hasta 6) — visibles para todos los usuarios
+- **Fotos exclusivas** (hasta 12, solo usuarios Premium) — ver sección 2.7
 - Biografía
 - Tipo therianthrope *(dato sensible — ver sección 2.6)*
 - Moods e intereses
@@ -66,6 +67,48 @@ Bajo la Ley 25.326, se consideran **datos sensibles** aquellos que revelan orige
 - **Datos biométricos** (solo si verificás identidad con foto de documento)
 
 Estos datos se tratan con protección reforzada. Al completar tu perfil con esta información **otorgás consentimiento explícito** para su tratamiento. Podés eliminarlos en cualquier momento desde tu perfil.
+
+### 2.7 Fotos Exclusivas (Premium)
+
+Las fotos exclusivas son contenido íntimo o privado que solo querés compartir con un grupo limitado de usuarios. Tienen tratamiento reforzado:
+
+**Almacenamiento**
+- Bucket privado en Supabase Storage (no accesible públicamente)
+- Segregación por user ID: solo tu UUID puede escribir en tu carpeta
+- Row Level Security (RLS) a nivel de base de datos
+
+**Acceso**
+- Solo usuarios con suscripción **Premium activa** generan URLs firmadas para visualizarlas
+- Las URLs firmadas expiran **automáticamente en 1 hora**
+- Los usuarios no premium ven un placeholder bloqueado, sin posibilidad técnica de acceder al archivo
+
+**Protección anti-captura**
+- **Android**: capturas de pantalla bloqueadas por sistema operativo (FLAG_SECURE) cuando se visualizan fotos exclusivas
+- **iOS**: el sistema operativo no permite bloquear capturas, pero detectamos cada intento y queda registrado en tu cuenta para fines de seguridad
+- Los intentos reiterados resultan en bloqueo de cuenta (ver Términos, sección 5.4)
+
+**Uso restringido**
+- NO se utilizan para entrenamiento de algoritmos
+- NO se incluyen en analytics anonimizados
+- NO se replican en backups de larga duración
+- Eliminación: permanente y dentro de 24 horas desde tu solicitud
+
+### 2.8 Datos Biométricos para Autenticación
+
+La App permite usar tu huella digital o reconocimiento facial para iniciar sesión. Estos datos:
+- **Permanecen en tu dispositivo** (Keychain en iOS / Keystore en Android)
+- **Nunca se transmiten** a nuestros servidores
+- **Nunca son visibles** para nosotros
+- Podés desactivarlos desde Configuración → Seguridad
+
+### 2.9 Registro de Eventos de Seguridad
+
+Para proteger a otros usuarios, registramos en nuestra base de datos los siguientes eventos:
+- Intentos de captura de pantalla detectados sobre fotos exclusivas ajenas
+- Reportes recibidos contra tu cuenta
+- Acciones de moderación tomadas
+
+Estos registros se conservan por 2 años y son auditables solo por nuestro equipo de moderación bajo procedimientos documentados.
 
 ---
 
@@ -106,7 +149,7 @@ Compartimos datos únicamente cuando es necesario para operar la App:
 |-----------|------------------|-----------|------------|
 | **Apple / Google Play** | Email, historial de compras | Procesar pagos | Cumplimiento PCI DSS |
 | **Stripe** | Últimos 4 dígitos, email | Procesar pagos | Encriptación extremo a extremo |
-| **AWS / Google Cloud** | Contenido encriptado | Almacenamiento | Cumplimiento estándares internacionales |
+| **Supabase** (AWS infra, EE.UU./UE) | Perfil, mensajes, fotos | Base de datos y almacenamiento de archivos | RLS, encriptación AES-256 en reposo, TLS 1.3 en tránsito, SOC 2 Type II |
 | **Firebase** | Eventos anonimizados | Analítica y notificaciones push | Sin datos identificables |
 | **Autoridades legales** | Lo requerido por orden judicial | Cumplimiento legal | Solo con orden judicial válida |
 
@@ -150,6 +193,13 @@ De acuerdo con el **Art. 12 de la Ley 25.326**, la transferencia de datos a paí
 - Keychain (iOS) para tokens
 - Keystore (Android) para datos sensibles
 
+**Control de acceso a fotos:**
+- Fotos públicas: bucket público de Supabase Storage, URLs estables y cacheables
+- Fotos exclusivas: bucket privado, acceso únicamente vía URLs firmadas con expiración de 1 hora
+- Row Level Security (RLS) a nivel de base de datos: cada usuario solo puede escribir/borrar archivos en su propia carpeta
+- Solo usuarios Premium activos pueden generar URLs firmadas para fotos exclusivas ajenas
+- Los intentos de captura de pantalla quedan registrados (sección 2.9)
+
 ### 6.2 Medidas Administrativas
 
 - Acceso restringido: solo personal con necesidad operativa
@@ -172,11 +222,13 @@ Si detectamos una brecha de seguridad que afecte tus datos:
 | Tipo de dato | Período de retención | Qué pasa al vencer |
 |---|---|---|
 | Perfil activo | Mientras usás la App | Se anonimiza a los 30 días del cierre |
-| Fotos de perfil | Hasta eliminación | Se eliminan en 30 días |
+| Fotos públicas de perfil | Hasta eliminación | Se eliminan en 30 días |
+| **Fotos exclusivas (Premium)** | Hasta eliminación | **Se eliminan en 24 horas** desde tu solicitud, sin replicación en backups de larga duración |
 | Mensajes | 1 año desde envío | Se eliminan permanentemente |
 | Datos de pago | 7 años | Requerimiento legal impositivo (AFIP) |
 | Logs de acceso | 90 días | Se eliminan automáticamente |
 | Datos de dispositivo | 30 días | Se eliminan automáticamente |
+| Registro de violaciones de seguridad | 2 años | Para fines de moderación y denuncias judiciales |
 | Fecha de nacimiento | 7 años post-cierre | Verificación de edad legal |
 
 Los datos se borran permanentemente o se anonimizan al vencer el plazo.

@@ -11,6 +11,8 @@ import SettingsPage from "../pages/SettingsPage";
 import AchievementsPage from "../pages/AchievementsPage";
 import GiftShopPage from "../pages/GiftShopPage";
 import PremiumPlansPage from "../pages/PremiumPlansPage";
+import SafetyCenter from "../screens/SafetyCenter";
+import SafeDateMode from "../screens/SafeDateMode";
 
 const Stack = createStackNavigator();
 
@@ -28,6 +30,8 @@ export default function AppNavigator() {
       <Stack.Screen name="GiftShopPage" component={GiftShopPage} />
       <Stack.Screen name="GiftShop" component={GiftShopPage} />
       <Stack.Screen name="PremiumPlans" component={PremiumPlansPage} />
+      <Stack.Screen name="SafetyCenter" component={SafetyCenter} />
+      <Stack.Screen name="SafeDateMode" component={SafeDateMode} />
     </Stack.Navigator>
   );
 }

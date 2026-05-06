@@ -1,5 +1,6 @@
 import { LinearGradient } from "expo-linear-gradient";
 import * as ImagePicker from "expo-image-picker";
+import * as ScreenCapture from "expo-screen-capture";
 import { useContext, useEffect, useRef, useState } from "react";
 import {
   Alert,
@@ -54,6 +55,16 @@ export default function ProfilePage({ navigation }) {
     }
   }, []);
 
+  // Bloquear capturas de pantalla cuando hay fotos exclusivas en pantalla
+  useEffect(() => {
+    if (isPremium && exclusivePaths.length > 0) {
+      ScreenCapture.preventScreenCaptureAsync().catch(() => {});
+      return () => {
+        ScreenCapture.allowScreenCaptureAsync().catch(() => {});
+      };
+    }
+  }, [isPremium, exclusivePaths.length]);
+
   const pickPhoto = async (type) => {
     const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (!permission.granted) {
@@ -89,7 +100,8 @@ export default function ProfilePage({ navigation }) {
       setPendingPublic([]);
       Alert.alert("¡Listo!", `${urls.length} foto${urls.length > 1 ? "s" : ""} pública${urls.length > 1 ? "s" : ""} subida${urls.length > 1 ? "s" : ""}.`);
     } catch (e) {
-      Alert.alert("Error", "No se pudieron subir las fotos. Intentá de nuevo.");
+      console.error("Upload public photos error:", e);
+      Alert.alert("Error al subir", e?.message || JSON.stringify(e) || "Error desconocido");
     } finally {
       setUploadingPublic(false);
     }
@@ -109,7 +121,8 @@ export default function ProfilePage({ navigation }) {
       setPendingExclusive([]);
       Alert.alert("¡Listo!", `${paths.length} foto${paths.length > 1 ? "s" : ""} exclusiva${paths.length > 1 ? "s" : ""} subida${paths.length > 1 ? "s" : ""}.`);
     } catch (e) {
-      Alert.alert("Error", "No se pudieron subir las fotos exclusivas.");
+      console.error("Upload exclusive photos error:", e);
+      Alert.alert("Error al subir exclusivas", e?.message || JSON.stringify(e) || "Error desconocido");
     } finally {
       setUploadingExclusive(false);
     }

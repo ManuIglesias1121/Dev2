@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useMemo, useRef } from "react";
+import React, { useEffect, useState, useMemo, useRef, useCallback } from "react";
 import {
   ActivityIndicator,
   Animated,
@@ -12,7 +12,7 @@ import {
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
-import { useNavigation } from "@react-navigation/native";
+import { useNavigation, useFocusEffect } from "@react-navigation/native";
 import SwipeCard from "../components/SwipeCard";
 import BannerAdComponent from "../components/BannerAdComponent";
 import { getTherianProfiles } from "../services/profilesService";
@@ -48,23 +48,34 @@ export default function SwipePage() {
   const swipeCount = useRef(0);
   const isPremium = user?.plan && user.plan !== "free";
 
+  const loadProfiles = useCallback(async () => {
+    const data = await getTherianProfiles(user?.supabaseId || user?.id);
+    setProfiles(data);
+    setIndex(0);
+    setNoMoreVisible(false);
+    setLoading(false);
+    Animated.timing(fadeAnim, { toValue: 1, duration: 500, useNativeDriver: true }).start();
+  }, [user?.supabaseId, user?.id]);
+
   useEffect(() => {
-    async function load() {
-      const data = await getTherianProfiles(user?.supabaseId || user?.id);
-      setProfiles(data);
-      setLoading(false);
-      Animated.timing(fadeAnim, { toValue: 1, duration: 500, useNativeDriver: true }).start();
-    }
-    load();
-  }, []);
+    loadProfiles();
+  }, [loadProfiles]);
+
+  // Recargar perfiles cuando la pantalla vuelve a tener foco (nuevos registros)
+  useFocusEffect(
+    useCallback(() => {
+      loadProfiles();
+    }, [loadProfiles])
+  );
 
   const filtered = useMemo(() => {
     return profiles.filter((p) => {
-      if (p.age < filters.ageMin || p.age > filters.ageMax) return false;
-      if (p.distance > filters.maxDistance) return false;
+      // Solo aplicar filtros de edad/distancia si el perfil tiene esos datos
+      if (p.age != null && (p.age < filters.ageMin || p.age > filters.ageMax)) return false;
+      if (p.distance != null && p.distance > filters.maxDistance) return false;
       if (filters.onlyPremium && !p.isPremium) return false;
-      if (filters.gender !== "all" && p.gender !== filters.gender) return false;
-      if (filters.theriotypes.length > 0 && !filters.theriotypes.includes(p.primary_theriotype)) return false;
+      if (filters.gender !== "all" && p.gender && p.gender !== filters.gender) return false;
+      if (filters.theriotypes.length > 0 && p.primary_theriotype && !filters.theriotypes.includes(p.primary_theriotype)) return false;
       return true;
     });
   }, [profiles, filters]);
@@ -97,7 +108,8 @@ export default function SwipePage() {
 
   const handleSuperLike = async () => {
     if (!current) return;
-    const existing = await loadData(STORAGE_KEYS.CHAT_CONTACTS + "_supermatches", []);
+    // Los super likes que YO doy van a "sent_super_matches"
+    const existing = await loadData("sent_super_matches", []);
     const alreadyExists = existing.find((m) => m.id === current.id);
     if (!alreadyExists) {
       const newMatch = {
@@ -110,7 +122,7 @@ export default function SwipePage() {
         },
         created_at: new Date().toISOString(),
       };
-      await saveData(STORAGE_KEYS.CHAT_CONTACTS + "_supermatches", [newMatch, ...existing]);
+      await saveData("sent_super_matches", [newMatch, ...existing]);
     }
     handleSwipe();
   };

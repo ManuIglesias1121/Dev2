@@ -103,36 +103,55 @@ export default function LocalizationPage() {
     ? users.filter((u) => u.city === selectedCity)
     : users;
 
-  const renderUserCard = ({ item }) => (
-    <TouchableOpacity
-      style={styles.userCard}
-      onPress={() =>
-        navigation.navigate('ProfileDetail', {
-          profile: {
-            id: item.id,
-            display_name: item.name,
-            name: item.name,
-            age: item.age,
-            city: item.city,
-            avatar: item.photo,
-            photos: item.photo ? [item.photo] : [],
-            primary_theriotype: item.theriotype,
-            isPremium: item.isPremium,
-          },
-        })
-      }
-    >
-      <Image source={resolveSource(item.photo)} style={styles.userPhoto} resizeMode="cover" />
-      {item.online && <View style={styles.onlineBadge} />}
-      <LinearGradient
-        colors={['transparent', 'rgba(0,0,0,0.8)']}
-        style={styles.userInfo}
-      >
-        <Text style={styles.userName}>{item.name}, {item.age}</Text>
-        <Text style={styles.userCity}>📍 {item.city}</Text>
-      </LinearGradient>
-    </TouchableOpacity>
-  );
+  const renderUserCard = ({ item }) => {
+    const photos = item.photo ? [item.photo] : [];
+    const profilePayload = {
+      id: item.id,
+      display_name: item.name,
+      name: item.name,
+      age: item.age,
+      city: item.city,
+      avatar: item.photo,
+      photos,
+      primary_theriotype: item.theriotype,
+      isPremium: item.isPremium,
+    };
+
+    return (
+      <View style={styles.userCard}>
+        {/* Foto: abre galería */}
+        <TouchableOpacity
+          style={StyleSheet.absoluteFill}
+          activeOpacity={0.9}
+          onPress={() => {
+            if (photos.length > 0) {
+              navigation.navigate('GalleryPage', { photos, initialIndex: 0 });
+            } else {
+              navigation.navigate('ProfileDetail', { profile: profilePayload });
+            }
+          }}
+        >
+          <Image source={resolveSource(item.photo)} style={styles.userPhoto} resizeMode="cover" />
+          {item.online && <View style={styles.onlineBadge} />}
+        </TouchableOpacity>
+
+        {/* Footer con nombre: abre perfil */}
+        <TouchableOpacity
+          activeOpacity={0.9}
+          onPress={() => navigation.navigate('ProfileDetail', { profile: profilePayload })}
+          style={styles.userInfoTouchable}
+        >
+          <LinearGradient
+            colors={['transparent', 'rgba(0,0,0,0.85)']}
+            style={styles.userInfo}
+          >
+            <Text style={styles.userName}>{item.name}, {item.age}</Text>
+            <Text style={styles.userCity}>📍 {item.city}</Text>
+          </LinearGradient>
+        </TouchableOpacity>
+      </View>
+    );
+  };
 
   return (
     <View style={styles.container}>
@@ -322,11 +341,13 @@ const styles = StyleSheet.create({
     borderColor: '#1a1a2e',
     zIndex: 10,
   },
-  userInfo: {
+  userInfoTouchable: {
     position: 'absolute',
     bottom: 0,
     left: 0,
     right: 0,
+  },
+  userInfo: {
     padding: 12,
   },
   userName: { color: 'white', fontSize: 14, fontWeight: '700' },

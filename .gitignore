@@ -51,3 +51,6 @@ app-example
 
 # Claude Code local config
 .claude/
+
+# Backup folders (no se versionan)
+_backup_*/

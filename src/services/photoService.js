@@ -1,3 +1,5 @@
+import * as FileSystem from "expo-file-system/legacy";
+import { decode } from "base64-arraybuffer";
 import { supabase } from "./supabase";
 
 const AVATARS_BUCKET = "avatars";
@@ -7,9 +9,12 @@ const MAX_EXCLUSIVE_PHOTOS = 12;
 
 export { MAX_PUBLIC_PHOTOS, MAX_EXCLUSIVE_PHOTOS };
 
-async function uriToBlob(uri) {
-  const response = await fetch(uri);
-  return response.blob();
+// Lee el archivo local y lo convierte a ArrayBuffer (método confiable en RN/Expo)
+async function uriToArrayBuffer(uri) {
+  const base64 = await FileSystem.readAsStringAsync(uri, {
+    encoding: FileSystem.EncodingType.Base64,
+  });
+  return decode(base64);
 }
 
 function getExtension(uri) {
@@ -21,11 +26,11 @@ function getExtension(uri) {
 export async function uploadAvatar(userId, localUri) {
   const ext = getExtension(localUri);
   const path = `${userId}/avatar.${ext}`;
-  const blob = await uriToBlob(localUri);
+  const arrayBuffer = await uriToArrayBuffer(localUri);
 
   const { error } = await supabase.storage
     .from(AVATARS_BUCKET)
-    .upload(path, blob, { contentType: `image/${ext}`, upsert: true });
+    .upload(path, arrayBuffer, { contentType: `image/${ext}`, upsert: true });
 
   if (error) throw error;
 
@@ -37,11 +42,11 @@ export async function uploadAvatar(userId, localUri) {
 export async function uploadPublicPhoto(userId, localUri) {
   const ext = getExtension(localUri);
   const path = `${userId}/${Date.now()}.${ext}`;
-  const blob = await uriToBlob(localUri);
+  const arrayBuffer = await uriToArrayBuffer(localUri);
 
   const { error } = await supabase.storage
     .from(AVATARS_BUCKET)
-    .upload(path, blob, { contentType: `image/${ext}` });
+    .upload(path, arrayBuffer, { contentType: `image/${ext}` });
 
   if (error) throw error;
 
@@ -53,11 +58,11 @@ export async function uploadPublicPhoto(userId, localUri) {
 export async function uploadExclusivePhoto(userId, localUri) {
   const ext = getExtension(localUri);
   const path = `${userId}/${Date.now()}.${ext}`;
-  const blob = await uriToBlob(localUri);
+  const arrayBuffer = await uriToArrayBuffer(localUri);
 
   const { error } = await supabase.storage
     .from(EXCLUSIVE_BUCKET)
-    .upload(path, blob, { contentType: `image/${ext}` });
+    .upload(path, arrayBuffer, { contentType: `image/${ext}` });
 
   if (error) throw error;
 

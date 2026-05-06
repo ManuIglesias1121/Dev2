@@ -1,6 +1,6 @@
 # TÉRMINOS Y CONDICIONES DE SERVICIO
 
-**Última actualización: Abril 18, 2026**
+**Última actualización: Mayo 3, 2026**
 
 ---
 
@@ -54,14 +54,45 @@ Estos Términos se rigen por las leyes de la **República Argentina**, incluyend
 
 5.1 Aceptás usar la App únicamente para encontrar conexiones genuinas.
 
-5.2 **Está prohibido**:
-- Acoso, amenazas, lenguaje ofensivo o discriminatorio
-- Solicitar dinero, criptomonedas o transferencias bancarias
-- Compartir contenido sexual explícito sin consentimiento
-- Suplantar la identidad de otro usuario
+5.2 **Está estrictamente prohibido**:
+
+**Violencia y acoso:**
+- Acoso, amenazas, intimidación o lenguaje ofensivo
+- Discriminación por género, identidad, orientación sexual, theriotype, etnia, religión o discapacidad
+- Lenguaje incitador al odio (hate speech)
+- Bullying o ciberbullying en cualquier forma
+- Stalking o vigilancia no consentida
+
+**Contenido sexual no consentido:**
+- Compartir, capturar, grabar o redistribuir **imágenes íntimas no consentidas (NCII)** — penalizado bajo **Ley 27.736 "Ley Olimpia" (Argentina)**
+- Sextorsión / chantaje con material íntimo — penalizado bajo **Ley 26.485** y agravado por **Ley 27.610**
+- Solicitar contenido sexual a personas que no lo consientan
+- **Capturar pantalla, grabar o redistribuir fotos exclusivas de otros usuarios** (ver sección 6.4)
+
+**Doxxing y outing:**
+- Revelar identidad real, dirección, lugar de trabajo, escuela u otra información personal de un usuario sin su consentimiento expreso
+- **Outing** (revelar identidad therian, identidad de género u orientación sexual de otro usuario) — sanción inmediata
+- Publicar capturas de chat o fotos de otro usuario en redes sociales, foros o cualquier medio externo
+
+**Suplantación y estafa:**
+- Crear perfil con identidad de otra persona (catfishing)
+- Solicitar dinero, criptomonedas, regalos o transferencias bancarias
+- Phishing o intentos de obtener credenciales
+- Promocionar servicios externos sin autorización
+
+**Contenido ilegal:**
+- Apología o promoción de violencia
+- Contenido relacionado con menores (será reportado bajo **Ley 26.904 "Grooming"** y **Convenio de Budapest**)
+- Tráfico sexual o servicios de prostitución/escorting
+- Venta de drogas o sustancias controladas
+- Tráfico de personas o esclavitud moderna
+- Contenido relacionado con terrorismo
+
+**Otros:**
 - Spam o mensajes masivos
+- Bots, scrapers, automatización
+- Vender o transferir tu cuenta
 - Vender datos de otros usuarios
-- Contenido ilegal o que promueva violencia
 
 5.3 Las violaciones serán sancionadas con:
 - Advertencia inicial
@@ -69,19 +100,89 @@ Estos Términos se rigen por las leyes de la **República Argentina**, incluyend
 - Banimiento permanente
 - Denuncia a autoridades si corresponde
 
+### 5.4 Anti-doxxing y protección de identidad
+
+Al unirte a TherianMatch, aceptás que la información de otros usuarios (theriotype, identidad de género, orientación, ubicación, fotos, conversaciones) se comparte bajo **expectativa razonable de privacidad dentro del ecosistema cerrado de la App**.
+
+**Sancionable con bloqueo permanente sin advertencia:**
+- Hacer público (redes sociales, foros, mensajería externa) cualquier dato de otro usuario obtenido en la App
+- Hacer "outing" de otro usuario (revelar identidad therian, género, orientación) sin su consentimiento
+- Vincular el perfil de otro usuario con su identidad civil real
+- Crear listas, capturas o compilados de usuarios para distribución externa
+
+Estas conductas pueden ser denunciadas además bajo:
+- **Ley 25.326** (Protección de Datos Personales)
+- **Ley 26.485** (Violencia contra las mujeres) si hay componente de género
+- **Ley 27.736 "Ley Olimpia"** si hay componente sexual
+
+### 5.5 Tolerancia cero ante captura de fotos exclusivas
+
+Las fotos exclusivas son contenido íntimo compartido bajo expectativa razonable de privacidad. Implementamos protección técnica que bloquea capturas de pantalla en Android. En iOS, donde el sistema operativo no permite bloquear capturas, **detectamos y registramos cada intento**.
+
+Sanciones específicas para captura/redistribución de fotos exclusivas ajenas:
+
+| Incidencia | Sanción |
+|---|---|
+| 1ra captura detectada | Advertencia formal en la App + registro permanente en cuenta |
+| 2da captura detectada | Suspensión por 30 días + revocación de acceso a fotos exclusivas |
+| 3ra captura o redistribución pública | **Bloqueo permanente de cuenta sin reembolso** + denuncia bajo Ley 27.736 "Ley Olimpia" o Ley 11.723 (propiedad intelectual) según corresponda |
+
+La redistribución pública (envío a terceros, publicación en redes, etc.) salta directamente al bloqueo permanente y denuncia, sin advertencias previas.
+
+### 5.6 Sistema de moderación
+
+**Filtros automáticos pre-envío.** La App analiza mensajes antes de enviarlos y advierte al emisor si detecta lenguaje potencialmente agresivo. El emisor puede revisar antes de enviar. El receptor recibe los mensajes flageados con un velo y opción "Ver de todas formas".
+
+**Cool-down automático.** Después de un mensaje flageado, el emisor entra en período de espera (1ra vez: 1 hora, 2da: 24 hs, 3ra: bloqueo permanente del chat).
+
+**Auto-suspensión por reportes acumulados.** 3 reportes válidos de usuarios distintos en 7 días → suspensión preventiva pendiente revisión humana.
+
+**Revisión humana.** Casos críticos (NCII, amenazas explícitas, contenido ilegal) son revisados por el equipo de moderación dentro de las **24 hs**.
+
+### 5.7 Bloquear y reportar
+
+Cualquier usuario puede en cualquier momento:
+- **Bloquear** a otro usuario — el bloqueo es instantáneo, gratuito y bidireccional (ninguno ve al otro)
+- **Reportar** una conducta — formularios anónimos, llegan al equipo de moderación
+- Ambas acciones se realizan con un único tap desde el perfil o el chat
+
+El usuario reportado **no es notificado** del reporte para su propia seguridad.
+
 ---
 
 ## 6. CONTENIDO DEL USUARIO
 
 6.1 **Propiedad**: El Contenido que subís sigue siendo tuyo. Nos otorgás licencia para:
-- Almacenarlo en servidores
-- Mostrarlo a otros usuarios dentro de la App
+- Almacenarlo en servidores (Supabase Storage)
+- Mostrarlo a otros usuarios dentro de la App según el tipo de contenido (público o exclusivo)
 - Realizar backups
-- Usar de forma anonimizada para mejorar algoritmos
+- Usar de forma anonimizada para mejorar algoritmos (excepto fotos exclusivas — ver 6.4)
 
 6.2 No vendemos tu Contenido a terceros.
 
 6.3 Sos responsable de que el Contenido que subís no viole derechos de terceros ni leyes aplicables.
+
+### 6.4 Fotos: Públicas vs Exclusivas
+
+La App diferencia dos tipos de fotos:
+
+**Fotos públicas (hasta 6 por perfil)**
+- Visibles para cualquier usuario de la App
+- Aparecen en el swipe feed y en la galería pública del perfil
+- Se almacenan en bucket público con URLs accesibles
+
+**Fotos exclusivas (hasta 12, solo para usuarios Premium)**
+- Solo visibles para usuarios con suscripción Premium activa
+- Se almacenan en bucket privado con acceso por URL firmada de tiempo limitado (1 hora)
+- **NO se utilizan para entrenamiento de algoritmos ni análisis automatizado**
+- Capturas y redistribución prohibidas (sección 5.4)
+
+6.5 Al subir fotos exclusivas reconocés que:
+- Son contenido bajo expectativa razonable de privacidad
+- Solo se mostrarán a usuarios Premium activos
+- Tenés derecho a eliminarlas en cualquier momento desde tu perfil
+- La eliminación es permanente y se ejecuta dentro de las 24 horas
+- Mantenés todos los derechos de autor sobre el contenido
 
 ---
 
@@ -227,6 +328,30 @@ Los usuarios argentinos también pueden realizar reclamos ante la **Secretaría 
 
 **Protección de Datos (Argentina):**
 Reclamos sobre datos personales ante la **Agencia de Acceso a la Información Pública (AAIP)**: [aaip.gob.ar](https://www.aaip.gob.ar)
+
+---
+
+## 15. RECURSOS DE CRISIS
+
+Si vos o alguien que conocés está atravesando una situación de violencia, acoso o crisis, contactá inmediatamente:
+
+### Argentina
+- **Línea 144** — Atención a mujeres en situación de violencia (24/7, gratuita)
+- **Línea 137** — Víctimas de violencia familiar y sexual (24/7, gratuita)
+- **Línea 102** — Niñez y adolescencia (24/7, gratuita)
+- **Línea 145** — Trata de personas
+- **0800-222-1717** — Salud Mental Responde
+- **Centro de Atención a Víctimas de Violencia Sexual (CAVAS)** — (011) 4912-9039
+
+### Internacional
+- **StopNCII.org** — Si alguien compartió tus imágenes íntimas sin consentimiento, podés crear un hash digital de tus fotos para que se bloqueen automáticamente en plataformas asociadas
+- **Take It Down (NCMEC)** — Para personas que tenían menos de 18 años cuando se tomaron las imágenes
+
+### Salud mental
+- **Centro de Asistencia al Suicida (CAS)** — 135 (CABA y GBA), (011) 5275-1135 (todo el país)
+- **SOS un Amigo Anónimo** — (011) 4783-1300
+
+Estas líneas son gratuitas y confidenciales. La App proporciona acceso directo a ellas desde el **Centro de Seguridad** (Configuración → Seguridad).
 
 ---
 

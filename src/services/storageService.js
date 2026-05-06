@@ -54,6 +54,7 @@ export const STORAGE_KEYS = {
   USER_PROFILE: "user_profile",
   CHATS: "chats",
   CHAT_CONTACTS: "chat_contacts",
+  DELETED_CONTACTS: "deleted_contacts",
   MATCHES: "matches",
   SWIPE_HISTORY: "swipe_history",
   SETTINGS: "app_settings",

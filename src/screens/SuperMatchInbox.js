@@ -10,14 +10,26 @@ function resolveSource(img) {
   return typeof img === "string" ? { uri: img } : img;
 }
 
+const DELETED_SUPER_MATCHES_KEY = "deleted_super_matches";
+const SENT_SUPER_MATCHES_KEY = "sent_super_matches";
+
 export default function SuperMatchInbox({ navigation }) {
-  const [superMatches, setSuperMatches] = useState(fakeSuperMatches);
+  const [received, setReceived] = useState([]);
+  const [sent, setSent] = useState([]);
+  const [tab, setTab] = useState("received"); // "received" | "sent"
 
   useFocusEffect(
     useCallback(() => {
       async function load() {
-        const saved = await loadData(STORAGE_KEYS.CHAT_CONTACTS + "_supermatches", []);
-        setSuperMatches([...saved, ...fakeSuperMatches]);
+        const savedReceived = await loadData(STORAGE_KEYS.CHAT_CONTACTS + "_supermatches", []);
+        const savedSent = await loadData(SENT_SUPER_MATCHES_KEY, []);
+        const deleted = await loadData(DELETED_SUPER_MATCHES_KEY, []);
+
+        const recv = [...savedReceived, ...fakeSuperMatches].filter((m) => !deleted.includes(m.id));
+        const out = savedSent.filter((m) => !deleted.includes(m.id));
+
+        setReceived(recv);
+        setSent(out);
       }
       load();
     }, [])
@@ -29,14 +41,26 @@ export default function SuperMatchInbox({ navigation }) {
       {
         text: "Eliminar", style: "destructive",
         onPress: async () => {
-          const updated = superMatches.filter((m) => m.id !== id);
-          setSuperMatches(updated);
-          const savedOnly = updated.filter((m) => !fakeSuperMatches.find((f) => f.id === m.id));
-          await saveData(STORAGE_KEYS.CHAT_CONTACTS + "_supermatches", savedOnly);
+          if (tab === "received") {
+            setReceived((r) => r.filter((m) => m.id !== id));
+            const saved = await loadData(STORAGE_KEYS.CHAT_CONTACTS + "_supermatches", []);
+            await saveData(STORAGE_KEYS.CHAT_CONTACTS + "_supermatches", saved.filter((m) => m.id !== id));
+          } else {
+            setSent((s) => s.filter((m) => m.id !== id));
+            const saved = await loadData(SENT_SUPER_MATCHES_KEY, []);
+            await saveData(SENT_SUPER_MATCHES_KEY, saved.filter((m) => m.id !== id));
+          }
+
+          const deleted = await loadData(DELETED_SUPER_MATCHES_KEY, []);
+          if (!deleted.includes(id)) {
+            await saveData(DELETED_SUPER_MATCHES_KEY, [...deleted, id]);
+          }
         },
       },
     ]);
   };
+
+  const list = tab === "received" ? received : sent;
 
   const handleBack = () => {
     if (navigation.canGoBack()) {
@@ -57,11 +81,35 @@ export default function SuperMatchInbox({ navigation }) {
         <View style={styles.headerSpacer} />
       </View>
 
-      {superMatches.length === 0 && (
-        <Text style={styles.empty}>Todavía no recibiste Super Matches</Text>
+      {/* TABS */}
+      <View style={styles.tabs}>
+        <TouchableOpacity
+          style={[styles.tab, tab === "received" && styles.tabActive]}
+          onPress={() => setTab("received")}
+        >
+          <Text style={[styles.tabText, tab === "received" && styles.tabTextActive]}>
+            ⬇️ Recibidos {received.length > 0 && `(${received.length})`}
+          </Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={[styles.tab, tab === "sent" && styles.tabActive]}
+          onPress={() => setTab("sent")}
+        >
+          <Text style={[styles.tabText, tab === "sent" && styles.tabTextActive]}>
+            ⬆️ Enviados {sent.length > 0 && `(${sent.length})`}
+          </Text>
+        </TouchableOpacity>
+      </View>
+
+      {list.length === 0 && (
+        <Text style={styles.empty}>
+          {tab === "received"
+            ? "Todavía no recibiste Super Matches"
+            : "Todavía no enviaste Super Matches"}
+        </Text>
       )}
 
-      {superMatches.map((item) => (
+      {list.map((item) => (
         <TouchableOpacity
           key={item.id}
           style={styles.card}
@@ -117,10 +165,38 @@ const styles = StyleSheet.create({
   headerSpacer: {
     width: 40,
   },
+  tabs: {
+    flexDirection: "row",
+    backgroundColor: "#111",
+    borderRadius: 12,
+    padding: 4,
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: "#222",
+  },
+  tab: {
+    flex: 1,
+    paddingVertical: 10,
+    alignItems: "center",
+    borderRadius: 8,
+  },
+  tabActive: {
+    backgroundColor: "#22c55e",
+  },
+  tabText: {
+    color: "#888",
+    fontSize: 14,
+    fontWeight: "600",
+  },
+  tabTextActive: {
+    color: "white",
+    fontWeight: "bold",
+  },
   empty: {
     color: "#777",
     fontSize: 16,
     marginTop: 20,
+    textAlign: "center",
   },
   card: {
     backgroundColor: "#111",

@@ -145,8 +145,10 @@ export default function ProfileEditPage({ navigation }) {
       try {
         avatarUrl = await uploadAvatar(user.supabaseId, avatar);
       } catch (e) {
-        console.warn("Error subiendo avatar:", e.message);
-        avatarUrl = user?.avatar || null; // mantener el anterior si falla
+        console.error("Error subiendo avatar:", e);
+        Alert.alert("Error subiendo avatar", e?.message || JSON.stringify(e));
+        setSaving(false);
+        return; // no guardar el resto si falla el avatar
       }
     }
 
@@ -166,7 +168,7 @@ export default function ProfileEditPage({ navigation }) {
 
     try {
       const { supabase } = require("../services/supabase");
-      await supabase
+      const { error } = await supabase
         .from("profiles")
         .update({
           display_name: updatedData.display_name,
@@ -180,8 +182,19 @@ export default function ProfileEditPage({ navigation }) {
           avatar_url: avatarUrl,
         })
         .eq("id", user?.supabaseId);
+
+      if (error) {
+        setSaving(false);
+        Alert.alert(
+          "Error guardando",
+          error.message + "\n\nTu perfil no se guardó en la base de datos."
+        );
+        return;
+      }
     } catch (e) {
-      console.warn("Error guardando en Supabase:", e.message);
+      setSaving(false);
+      Alert.alert("Error guardando", e?.message || "No se pudo guardar el perfil.");
+      return;
     }
 
     updateUser(updatedData);

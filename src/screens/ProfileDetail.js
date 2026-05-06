@@ -1,6 +1,7 @@
 import React, { useContext, useState, useEffect } from "react";
 import {
   ActivityIndicator,
+  Alert,
   Image,
   ScrollView,
   StyleSheet,
@@ -10,6 +11,7 @@ import {
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
+import * as ScreenCapture from "expo-screen-capture";
 import LikeButton from "../components/buttons/LikeButton";
 import NopeButton from "../components/buttons/NopeButton";
 import SuperMatchButton from "../components/buttons/SuperMatchButton";
@@ -46,6 +48,36 @@ export default function ProfileDetailPage({ route, navigation }) {
         .finally(() => setLoadingExclusive(false));
     }
   }, []);
+
+  // Bloquear capturas de pantalla y detectar intentos (iOS)
+  useEffect(() => {
+    if (!hasExclusive) return;
+
+    ScreenCapture.preventScreenCaptureAsync().catch(() => {});
+
+    const subscription = ScreenCapture.addScreenshotListener(() => {
+      // Registrar intento en Supabase
+      try {
+        const { supabase } = require("../services/supabase");
+        supabase.from("security_violations").insert({
+          user_id: user?.supabaseId,
+          target_user_id: profile.id,
+          type: "screenshot_exclusive_photo",
+        });
+      } catch {}
+
+      Alert.alert(
+        "⚠️ Captura detectada",
+        "Las fotos exclusivas están protegidas por ley. Compartirlas o capturarlas viola los Términos de Servicio.\n\nSi se reitera esta acción, tu cuenta será bloqueada permanentemente.",
+        [{ text: "Entendido" }]
+      );
+    });
+
+    return () => {
+      ScreenCapture.allowScreenCaptureAsync().catch(() => {});
+      subscription.remove();
+    };
+  }, [hasExclusive]);
 
   const handleSuperMatch = () => {
     if (!user?.isPremium) {
@@ -143,6 +175,25 @@ export default function ProfileDetailPage({ route, navigation }) {
             {profile.pack_role && <InfoBadge icon={roleEmoji[profile.pack_role] ?? "⭐"} text={profile.pack_role} />}
             {profile.city && <InfoBadge icon="📍" text={profile.city} />}
           </View>
+
+          {/* BOTÓN CHATEAR — solo si es un usuario real (UUID) */}
+          {profile.id && typeof profile.id === "string" && profile.id.length > 30 && profile.id !== user?.supabaseId && (
+            <TouchableOpacity
+              style={{ backgroundColor: "#22c55e", padding: 14, borderRadius: 12, flexDirection: "row", justifyContent: "center", alignItems: "center", gap: 8, marginBottom: 20 }}
+              onPress={() =>
+                navigation.navigate("ChatRoomPage", {
+                  name: profile.display_name,
+                  photo: profile.avatar || profile.photos?.[0],
+                  photos: profile.photos || [],
+                  contactId: profile.id,
+                  targetUserId: profile.id,
+                })
+              }
+            >
+              <Ionicons name="chatbubbles" size={20} color="white" />
+              <Text style={{ color: "white", fontWeight: "bold", fontSize: 16 }}>Chatear</Text>
+            </TouchableOpacity>
+          )}
 
           {/* GALERÍA PÚBLICA */}
           {photos.length > 1 && (

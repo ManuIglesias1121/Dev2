@@ -153,6 +153,25 @@ export default function SettingsPage({ navigation }) {
         <Row icon="search-outline" label="Aparecer en descubrimiento" rightElement={<Switch value={discoveryVisible} onValueChange={setDiscoveryVisible} trackColor={{ true: "#16a34a" }} thumbColor={discoveryVisible ? "#22c55e" : "#555"} />} last />
       </Section>
 
+      {/* SEGURIDAD */}
+      <Section title="Seguridad">
+        <Row
+          icon="shield-checkmark-outline"
+          iconColor="#ef4444"
+          label="Centro de Seguridad"
+          sublabel="Recursos de crisis, tips de cita segura y más"
+          onPress={() => navigation.navigate("SafetyCenter")}
+        />
+        <Row
+          icon="location-outline"
+          iconColor="#16a34a"
+          label="Modo Cita Segura"
+          sublabel="Compartir ubicación con un contacto de confianza"
+          onPress={() => navigation.navigate("SafeDateMode")}
+          last
+        />
+      </Section>
+
       {/* PLAN */}
       <Section title="Suscripción">
         <Row
