@@ -6,6 +6,18 @@ import { AuthProvider } from "./src/contexts/AuthContext";
 import RootNavigator from "./src/navigation/RootNavigator";
 import { setupNotifications } from "./src/services/notificationService";
 import SafetyOnboardingModal from "./src/components/SafetyOnboardingModal";
+import { useGlobalChatNotifications } from "./src/hooks/useGlobalChatNotifications";
+
+// Componente interno: corre dentro de AuthProvider para tener acceso al user
+function AppInner() {
+  useGlobalChatNotifications();
+  return (
+    <>
+      <RootNavigator />
+      <SafetyOnboardingModal />
+    </>
+  );
+}
 
 export default function App() {
   const notifListener = useRef();
@@ -35,8 +47,7 @@ export default function App() {
   return (
     <SafeAreaProvider>
       <AuthProvider>
-        <RootNavigator />
-        <SafetyOnboardingModal />
+        <AppInner />
       </AuthProvider>
     </SafeAreaProvider>
   );

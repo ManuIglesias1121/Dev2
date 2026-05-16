@@ -13,6 +13,7 @@ import {
   ActivityIndicator,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { AuthContext } from "../contexts/AuthContext";
 import {
   uploadPublicPhoto,
@@ -21,12 +22,13 @@ import {
   deleteExclusivePhoto,
   getExclusivePhotoUrls,
   savePhotosToProfile,
-  MAX_PUBLIC_PHOTOS,
+  getMaxPublicPhotos,
   MAX_EXCLUSIVE_PHOTOS,
 } from "../services/photoService";
 
 export default function ProfilePage({ navigation }) {
   const { user, logout, updateUser } = useContext(AuthContext);
+  const insets = useSafeAreaInsets();
 
   const fadeAnim = useRef(new Animated.Value(0)).current;
 
@@ -43,6 +45,7 @@ export default function ProfilePage({ navigation }) {
   const [loadingExclusive, setLoadingExclusive] = useState(false);
 
   const isPremium = user?.isPremium || user?.is_premium || false;
+  const maxPublicPhotos = getMaxPublicPhotos(isPremium);
 
   useEffect(() => {
     Animated.timing(fadeAnim, { toValue: 1, duration: 600, useNativeDriver: true }).start();
@@ -71,7 +74,7 @@ export default function ProfilePage({ navigation }) {
       Alert.alert("Permiso necesario", "Activa el acceso a la galería en Ajustes.");
       return;
     }
-    const limit = type === "public" ? MAX_PUBLIC_PHOTOS : MAX_EXCLUSIVE_PHOTOS;
+    const limit = type === "public" ? maxPublicPhotos : MAX_EXCLUSIVE_PHOTOS;
     const current = type === "public" ? publicPhotos.length + pendingPublic.length : exclusivePaths.length + pendingExclusive.length;
     if (current >= limit) {
       Alert.alert("Límite alcanzado", `Máximo ${limit} fotos ${type === "public" ? "públicas" : "exclusivas"}.`);
@@ -188,7 +191,7 @@ export default function ProfilePage({ navigation }) {
     <Animated.View style={{ flex: 1, opacity: fadeAnim }}>
       <ScrollView
         style={{ flex: 1, backgroundColor: "black" }}
-        contentContainerStyle={{ paddingBottom: 40 }}
+        contentContainerStyle={{ paddingBottom: 40 + insets.bottom }}
       >
         {/* HEADER */}
         <LinearGradient
@@ -264,9 +267,39 @@ export default function ProfilePage({ navigation }) {
             }}
             onPress={() => navigation.navigate("Settings")}
           >
-            <Text style={{ color: "white", fontSize: 16 }}>⚙️</Text>
+            <Ionicons name="settings-outline" size={18} color="white" />
           </TouchableOpacity>
         </View>
+
+        {/* ACCESO A VISITANTES */}
+        <TouchableOpacity
+          onPress={() => navigation.navigate("Visitors")}
+          style={{
+            flexDirection: "row",
+            alignItems: "center",
+            backgroundColor: isPremium ? "rgba(167,139,250,0.1)" : "rgba(167,139,250,0.05)",
+            marginHorizontal: 20,
+            marginTop: 20,
+            padding: 14,
+            borderRadius: 14,
+            borderWidth: 1,
+            borderColor: "#a78bfa44",
+            gap: 12,
+          }}
+        >
+          <View style={{ width: 40, height: 40, borderRadius: 10, backgroundColor: "rgba(167,139,250,0.2)", justifyContent: "center", alignItems: "center" }}>
+            <Ionicons name={isPremium ? "eye" : "lock-closed"} size={20} color="#a78bfa" />
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={{ color: "white", fontSize: 15, fontWeight: "600" }}>
+              {isPremium ? "Quién visitó tu perfil" : "Ver visitantes 👑"}
+            </Text>
+            <Text style={{ color: "#888", fontSize: 12, marginTop: 2 }}>
+              {isPremium ? "Mirá quién estuvo viendo tu perfil" : "Solo para usuarios Premium"}
+            </Text>
+          </View>
+          <Ionicons name="chevron-forward" size={18} color="#666" />
+        </TouchableOpacity>
 
         {/* CARD PRINCIPAL */}
         <View
@@ -358,12 +391,12 @@ export default function ProfilePage({ navigation }) {
         {/* FOTOS PÚBLICAS */}
         <PhotoSection
           title="Fotos del perfil"
-          subtitle={`Visibles para todos · máx ${MAX_PUBLIC_PHOTOS}`}
+          subtitle={`Visibles para todos · máx ${maxPublicPhotos}${isPremium ? " (Premium)" : ""}`}
           accentColor="#16a34a"
           photos={publicPhotos}
           pending={pendingPublic}
           uploading={uploadingPublic}
-          canAdd={publicPhotos.length + pendingPublic.length < MAX_PUBLIC_PHOTOS}
+          canAdd={publicPhotos.length + pendingPublic.length < maxPublicPhotos}
           onPick={() => pickPhoto("public")}
           onRemoveSaved={removePublicPhoto}
           onRemovePending={(i) => setPendingPublic((p) => p.filter((_, j) => j !== i))}

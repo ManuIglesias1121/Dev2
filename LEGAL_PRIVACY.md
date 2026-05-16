@@ -9,15 +9,15 @@
 Tu privacidad es nuestra prioridad. Esta Política explica qué datos recopilamos, cómo los protegemos y tus derechos sobre ellos.
 
 **Responsable del Tratamiento de Datos:**
-- **Nombre/Razón social**: TherianMatch / [Nombre legal del desarrollador]
+- **Nombre/Razón social**: TherianMatchConnect / [Nombre legal del desarrollador]
 - **CUIT**: [CUIT del responsable]
 - **Domicilio legal**: [Dirección completa, Ciudad, Provincia, Argentina]
-- **Email de contacto**: privacy@therianmatch.app
+- **Email de contacto**: soportetherianmatch@gmail.com
 - **Teléfono**: [Teléfono de contacto]
 
 Esta Política se rige por la **Ley 25.326 de Protección de los Datos Personales de la República Argentina** y su Decreto Reglamentario 1558/2001. Para usuarios de otros países, también aplicamos los estándares equivalentes de su legislación local.
 
-**La base de datos de usuarios de TherianMatch se encuentra inscripta ante la Agencia de Acceso a la Información Pública (AAIP) bajo el N° de registro: [N° de inscripción AAIP].**
+**La base de datos de usuarios de TherianMatchConnect se encuentra inscripta ante la Agencia de Acceso a la Información Pública (AAIP) bajo el N° de registro: [N° de inscripción AAIP].**
 
 ---
 
@@ -241,14 +241,14 @@ Tenés derecho a:
 
 ### 8.1 Acceso (Art. 14)
 Ver todos los datos que tenemos sobre vos.
-- Solicitá: privacy@therianmatch.app
+- Solicitá: soportetherianmatch@gmail.com
 - Plazo de respuesta: **30 días corridos**
 - Sin costo
 
 ### 8.2 Rectificación (Art. 16)
 Actualizar datos incorrectos o desactualizados.
 - Directamente desde tu perfil en la App
-- O contactando: privacy@therianmatch.app
+- O contactando: soportetherianmatch@gmail.com
 
 ### 8.3 Supresión ("Derecho al Olvido") (Art. 16)
 Solicitar la eliminación de tus datos.
@@ -266,7 +266,7 @@ Descargar una copia de tus datos en formato JSON/CSV.
 - Optar por no participar en analítica desde Configuración
 
 ### 8.6 Cómo ejercer tus derechos
-Enviá un email a **privacy@therianmatch.app** con:
+Enviá un email a **soportetherianmatch@gmail.com** con:
 - Asunto: [Tipo de solicitud] + tu email de cuenta
 - Descripción de lo que solicitás
 
@@ -315,7 +315,7 @@ Podés borrar estos datos desde: **Configuración → Privacidad → Limpiar dat
 ## 12. CONTACTO Y RECLAMOS
 
 **Oficial de Protección de Datos (DPO):**
-- Email: privacy@therianmatch.app
+- Email: soportetherianmatch@gmail.com
 - Teléfono: [Teléfono de contacto]
 - Domicilio: [Dirección legal, Ciudad, Argentina]
 
@@ -338,4 +338,4 @@ Podés borrar estos datos desde: **Configuración → Privacidad → Limpiar dat
 📋 **Transparencia**: acceso a toda tu información personal en menos de 30 días
 🇦🇷 **Ley aplicable**: Ley 25.326 de Protección de Datos Personales (Argentina)
 
-**¿Dudas? Escribinos a privacy@therianmatch.app**
+**¿Dudas? Escribinos a soportetherianmatch@gmail.com**

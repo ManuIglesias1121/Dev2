@@ -1,7 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
 import { Image } from "react-native";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
-import { StyleSheet } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useNavigation } from "@react-navigation/native";
 import { useAuth } from "../contexts/AuthContext";
@@ -9,22 +8,14 @@ import { useEffect, useRef } from "react";
 
 import ChatListPage from "../pages/ChatListPage";
 import MatchesPage from "../pages/MatchesPage";
-import PremiumPage from "../pages/PremiumPage";
 import ProfilePage from "../pages/ProfilePage";
-import VisitorsPage from "../pages/VisitorsPage";
-import SuperMatchInbox from "../screens/SuperMatchInbox";
 import SwipePage from "../pages/SwipePage";
 import LocalizationPage from "../pages/LocalizationPage";
 
 const Tab = createBottomTabNavigator();
 
-function VisitorsTab() {
-  const { user } = useAuth();
-  return user?.isPremium ? <VisitorsPage /> : <PremiumPage />;
-}
-
 export default function MainTabs() {
-  const { user, newUser, setNewUser } = useAuth();
+  const { newUser, setNewUser } = useAuth();
   const insets = useSafeAreaInsets();
   const navigation = useNavigation();
   const redirected = useRef(false);
@@ -45,22 +36,14 @@ export default function MainTabs() {
           backgroundColor: "black",
           borderTopColor: "#222",
           height: 60 + insets.bottom,
-          paddingBottom: insets.bottom > 0 ? insets.bottom : 10,
-          paddingTop: 8,
+          paddingBottom: insets.bottom > 0 ? insets.bottom : 6,
+          paddingTop: 6,
         },
-        tabBarItemStyle: {
-          paddingTop: 4,
-          paddingBottom: 6,
-        },
-        tabBarIconStyle: {
-          marginTop: -22,
-        },
-        tabBarActiveTintColor: "#16a34a",
+        tabBarActiveTintColor: "#22c55e",
         tabBarInactiveTintColor: "#16a34a",
         tabBarLabelStyle: {
-          fontSize: 12,
-          marginBottom: 4,
-          marginTop: 0,
+          fontSize: 11,
+          fontWeight: "500",
         },
       }}
     >
@@ -70,7 +53,7 @@ export default function MainTabs() {
         options={{
           tabBarLabel: "Inicio",
           tabBarIcon: ({ color, size }) => (
-            <Ionicons name="home" size={size} color={color} style={styles.tabIcon} />
+            <Ionicons name="home" size={size} color={color} />
           ),
         }}
       />
@@ -80,7 +63,7 @@ export default function MainTabs() {
         options={{
           tabBarLabel: "Chat",
           tabBarIcon: ({ color, size }) => (
-            <Ionicons name="chatbubbles" size={size} color={color} style={styles.tabIcon} />
+            <Ionicons name="chatbubbles" size={size} color={color} />
           ),
         }}
       />
@@ -93,15 +76,12 @@ export default function MainTabs() {
           tabBarIcon: ({ color, size, focused }) => (
             <Image
               source={require('../../assets/Maches.png')}
-              style={[
-                styles.tabIcon,
-                {
-                  width: size,
-                  height: size,
-                  tintColor: focused ? '#16a34a' : '#16a34a',
-                  resizeMode: 'contain',
-                },
-              ]}
+              style={{
+                width: size,
+                height: size,
+                tintColor: focused ? '#22c55e' : '#16a34a',
+                resizeMode: 'contain',
+              }}
             />
           ),
         }}
@@ -113,33 +93,8 @@ export default function MainTabs() {
         options={{
           tabBarLabel: "Mapa",
           tabBarIcon: ({ color, size }) => (
-            <Ionicons name="map" size={size} color={color} style={styles.tabIcon} />
+            <Ionicons name="map" size={size} color={color} />
           ),
-        }}
-      />
-
-      <Tab.Screen
-        name="SuperMatchInbox"
-        component={SuperMatchInbox}
-        options={{
-          tabBarLabel: "Super",
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="star" size={size} color={color} />
-          ),
-        }}
-      />
-
-      <Tab.Screen
-        name="Visitors"
-        component={VisitorsTab}
-        options={{
-          tabBarLabel: user?.isPremium ? "Visitantes" : "Premium",
-          tabBarIcon: ({ color, size }) =>
-            user?.isPremium ? (
-              <Ionicons name="eye" size={size} color={color} />
-            ) : (
-              <Ionicons name="lock-closed" size={size} color={color} />
-            ),
         }}
       />
 
@@ -149,16 +104,10 @@ export default function MainTabs() {
         options={{
           tabBarLabel: "Perfil",
           tabBarIcon: ({ color, size }) => (
-            <Ionicons name="person" size={size} color={color} style={styles.tabIcon} />
+            <Ionicons name="person" size={size} color={color} />
           ),
         }}
       />
     </Tab.Navigator>
   );
 }
-
-const styles = StyleSheet.create({
-  tabIcon: {
-    marginTop: -18,
-  },
-});

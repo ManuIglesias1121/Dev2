@@ -96,7 +96,7 @@ export default function PremiumPage({ navigation }) {
           }}
         >
           {/* TÍTULO */}
-          <Text style={styles.title}>TherianMatch Premium</Text>
+          <Text style={styles.title}>TherianMatchConnect Premium</Text>
 
           <Text style={styles.subtitle}>
             Desbloqueá tu instinto.  

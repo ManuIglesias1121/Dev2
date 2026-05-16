@@ -39,10 +39,15 @@ export default function SuperMatchDetail({ route, navigation }) {
   }
 
   const handleChat = () => {
+    const senderId = match.sender?.id;
+    const isRealUser = senderId && typeof senderId === "string" && senderId.length > 30;
+
     navigation.replace("ChatRoomPage", {
-      chatId: match.id,
       name: match.sender.display_name,
       photo: match.sender.avatar,
+      photos: match.sender?.photos || (match.sender.avatar ? [match.sender.avatar] : []),
+      contactId: isRealUser ? senderId : `sm_${match.id}`,
+      targetUserId: isRealUser ? senderId : null, // UUID → activa modo chat real
     });
   };
 
@@ -164,48 +169,42 @@ const styles = StyleSheet.create({
   },
   giftTitle: {
     color: "#22c55e",
-    fontSize: 18,
+    fontSize: 15,
     fontWeight: "bold",
-    marginBottom: 8,
+    marginBottom: 10,
     marginTop: 10,
   },
   giftRow: {
     flexDirection: "row",
-    flexWrap: "wrap",
-    justifyContent: "center",
+    justifyContent: "space-between",
+    width: "100%",
+    paddingHorizontal: 4,
     marginBottom: 20,
+    gap: 8,
   },
   giftBtn: {
+    flex: 1,
     backgroundColor: '#16a34a',
-    borderRadius: 16,
-    paddingVertical: 18,
-    paddingHorizontal: 18,
-    margin: 8,
+    borderRadius: 12,
+    paddingVertical: 12,
+    paddingHorizontal: 8,
     alignItems: 'center',
-    minWidth: 80,
-    elevation: 6,
-    shadowColor: '#16a34a',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.4,
-    shadowRadius: 8,
-    borderWidth: 2,
+    justifyContent: 'center',
+    minHeight: 80,
+    borderWidth: 1,
     borderColor: '#22d3ee',
   },
   giftIcon: {
-    fontSize: 30,
+    fontSize: 13,
     marginBottom: 4,
     color: '#fff',
-    textShadowColor: '#22d3ee',
-    textShadowOffset: { width: 1, height: 1 },
-    textShadowRadius: 6,
+    textAlign: 'center',
+    fontWeight: '600',
   },
   giftPrice: {
     color: '#fff',
-    fontSize: 16,
+    fontSize: 12,
     fontWeight: 'bold',
-    textShadowColor: '#16a34a',
-    textShadowOffset: { width: 1, height: 1 },
-    textShadowRadius: 4,
   },
   chatBtn: {
     backgroundColor: '#22c55e',

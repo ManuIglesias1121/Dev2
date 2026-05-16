@@ -1,6 +1,7 @@
 import { LinearGradient } from "expo-linear-gradient";
 import * as ImagePicker from "expo-image-picker";
 import React, { useState, useContext } from "react";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { getCurrentLocation, reverseGeocode } from "../services/locationService";
 import { uploadAvatar } from "../services/photoService";
 import {
@@ -77,6 +78,7 @@ function SelectorModal({ visible, onClose, title, options, selected, onSelect })
 
 export default function ProfileEditPage({ navigation }) {
   const { user, updateUser } = useContext(AuthContext);
+  const insets = useSafeAreaInsets();
 
   const [displayName, setDisplayName] = useState(user?.display_name ?? "");
   const [biography, setBiography] = useState(user?.biography ?? user?.bio ?? "");
@@ -207,7 +209,7 @@ export default function ProfileEditPage({ navigation }) {
 
   return (
     <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === "ios" ? "padding" : undefined}>
-      <ScrollView style={{ flex: 1, backgroundColor: "#0a0a0a" }} contentContainerStyle={{ paddingBottom: 60 }}>
+      <ScrollView style={{ flex: 1, backgroundColor: "#0a0a0a" }} contentContainerStyle={{ paddingBottom: 60 + insets.bottom }}>
         {/* HEADER */}
         <LinearGradient colors={["#111", "#0a0a0a"]} style={{ paddingTop: 56, paddingBottom: 20, paddingHorizontal: 20 }}>
           <View style={{ flexDirection: "row", alignItems: "center" }}>

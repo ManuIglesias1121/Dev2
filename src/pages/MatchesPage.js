@@ -1,11 +1,12 @@
-import { useNavigation } from "@react-navigation/native";
-import React, { useState } from "react";
+import { useNavigation, useFocusEffect } from "@react-navigation/native";
+import React, { useState, useCallback, useEffect } from "react";
 
 function resolveSource(img) {
   if (!img) return require("../../assets/logo1.png");
   return typeof img === "string" ? { uri: img } : img;
 }
 import {
+  Alert,
   Animated,
   FlatList,
   Image,
@@ -19,6 +20,10 @@ import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
 import { useAuth } from "../contexts/AuthContext";
 import { fakeMatches } from "../data/fakeMatches";
+import { loadData, saveData } from "../services/storageService";
+import { fetchReceivedSuperMatches, subscribeToSuperMatches } from "../services/superMatchService";
+
+const DELETED_MATCHES_KEY = "deleted_matches";
 
 function timeAgo(isoDate) {
   const diff = Math.floor((Date.now() - new Date(isoDate).getTime()) / 1000);
@@ -32,9 +37,81 @@ export default function MatchesPage() {
   const navigation = useNavigation();
   const { user } = useAuth();
   const [search, setSearch] = useState("");
-  const [matches] = useState(fakeMatches);
+  const [matches, setMatches] = useState(fakeMatches);
+  const [deletedIds, setDeletedIds] = useState([]);
+  const [unreadSuperCount, setUnreadSuperCount] = useState(0);
 
-  const filtered = matches.filter((m) =>
+  const loadMatches = useCallback(async () => {
+    const deleted = await loadData(DELETED_MATCHES_KEY, []);
+    setDeletedIds(deleted);
+
+    // Traer super matches reales recibidos y mostrarlos como matches
+    let realMatches = [];
+    if (user?.supabaseId) {
+      try {
+        const supers = await fetchReceivedSuperMatches(user.supabaseId);
+        // Contar no leídos para el badge
+        setUnreadSuperCount(supers.filter((sm) => !sm.is_read).length);
+        realMatches = supers.map((sm) => ({
+          id: sm.id,
+          display_name: sm.sender.display_name,
+          avatar: sm.sender.avatar,
+          photos: sm.sender.photos || [],
+          primary_theriotype: sm.sender.primary_theriotype,
+          age: null,
+          city: null,
+          biography: null,
+          distance: null,
+          isPremium: false,
+          isOnline: false,
+          unreadCount: sm.is_read ? 0 : 1,
+          lastMessage: "Te mandó un Super Match ✨",
+          matchedAt: sm.created_at,
+          targetUserId: sm.sender.id, // para iniciar chat real
+        }));
+      } catch (e) {
+        console.warn("Error cargando super matches como matches:", e?.message);
+      }
+    }
+
+    // Combinar reales primero + fakes
+    setMatches([...realMatches, ...fakeMatches]);
+  }, [user?.supabaseId]);
+
+  useFocusEffect(
+    useCallback(() => {
+      loadMatches();
+    }, [loadMatches])
+  );
+
+  // Realtime: si llega un super match nuevo, actualizar
+  useEffect(() => {
+    if (!user?.supabaseId) return;
+    const unsubscribe = subscribeToSuperMatches(user.supabaseId, () => loadMatches());
+    return unsubscribe;
+  }, [user?.supabaseId, loadMatches]);
+
+  const handleDelete = (match) => {
+    Alert.alert(
+      "Eliminar match",
+      `¿Eliminar el match con ${match.display_name}? No vas a ver más esta conversación.`,
+      [
+        { text: "Cancelar", style: "cancel" },
+        {
+          text: "Eliminar",
+          style: "destructive",
+          onPress: async () => {
+            const newDeleted = [...deletedIds, match.id];
+            setDeletedIds(newDeleted);
+            await saveData(DELETED_MATCHES_KEY, newDeleted);
+          },
+        },
+      ]
+    );
+  };
+
+  const visibleMatches = matches.filter((m) => !deletedIds.includes(m.id));
+  const filtered = visibleMatches.filter((m) =>
     m.display_name.toLowerCase().includes(search.toLowerCase())
   );
 
@@ -46,10 +123,13 @@ export default function MatchesPage() {
   );
 
   const goToChat = (match) => {
+    const isRealUser = match.targetUserId && typeof match.targetUserId === "string" && match.targetUserId.length > 30;
     navigation.navigate("ChatRoomPage", {
       name: match.display_name,
       photo: match.avatar,
-      contactId: `match_${match.id}`,
+      photos: match.photos || (match.avatar ? [match.avatar] : []),
+      contactId: isRealUser ? match.targetUserId : `match_${match.id}`,
+      targetUserId: isRealUser ? match.targetUserId : null,
       isPremium: match.isPremium,
     });
   };
@@ -72,8 +152,25 @@ export default function MatchesPage() {
   };
 
   const MatchCard = ({ item }) => (
-    <TouchableOpacity onPress={() => goToChat(item)} style={styles.card}>
-      <View style={{ position: "relative" }}>
+    <View style={[styles.card, item.unreadCount > 0 && styles.cardNew]}>
+      {item.unreadCount > 0 && (
+        <View style={styles.newBadge}>
+          <Text style={styles.newBadgeText}>NUEVO</Text>
+        </View>
+      )}
+      {/* Foto: tap abre galería */}
+      <TouchableOpacity
+        onPress={() => {
+          const photos = item.photos?.length ? item.photos : (item.avatar ? [item.avatar] : []);
+          if (photos.length > 0) {
+            navigation.navigate("GalleryPage", { photos, initialIndex: 0 });
+          } else {
+            goToProfile(item);
+          }
+        }}
+        onLongPress={() => handleDelete(item)}
+        style={{ position: "relative" }}
+      >
         <Image source={resolveSource(item.avatar)} style={styles.avatar} />
         {item.isOnline && <View style={styles.onlineDot} />}
         {item.unreadCount > 0 && (
@@ -81,9 +178,14 @@ export default function MatchesPage() {
             <Text style={{ color: "white", fontSize: 10, fontWeight: "bold" }}>{item.unreadCount}</Text>
           </View>
         )}
-      </View>
+      </TouchableOpacity>
 
-      <View style={styles.cardInfo}>
+      {/* Info: tap abre el chat */}
+      <TouchableOpacity
+        style={styles.cardInfo}
+        onPress={() => goToChat(item)}
+        onLongPress={() => handleDelete(item)}
+      >
         <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
           <Text style={styles.name}>{item.display_name}</Text>
           {item.age && <Text style={{ color: "#666", fontSize: 14 }}>{item.age}</Text>}
@@ -91,7 +193,7 @@ export default function MatchesPage() {
         </View>
         <Text style={styles.theriotype}>{item.primary_theriotype} • {item.city}</Text>
         <Text style={styles.lastMessage} numberOfLines={1}>{item.lastMessage}</Text>
-      </View>
+      </TouchableOpacity>
 
       <View style={styles.cardRight}>
         <Text style={styles.timeAgo}>{timeAgo(item.matchedAt)}</Text>
@@ -99,27 +201,84 @@ export default function MatchesPage() {
           <Ionicons name="person-outline" size={16} color="#666" />
         </TouchableOpacity>
       </View>
-    </TouchableOpacity>
+    </View>
   );
 
   const NewMatchBubble = ({ item }) => (
-    <TouchableOpacity onPress={() => goToChat(item)} style={styles.bubble}>
-      <View style={{ position: "relative" }}>
+    <View style={styles.bubble}>
+      {/* Foto: tap abre galería */}
+      <TouchableOpacity
+        onPress={() => {
+          const photos = item.photos?.length ? item.photos : (item.avatar ? [item.avatar] : []);
+          if (photos.length > 0) {
+            navigation.navigate("GalleryPage", { photos, initialIndex: 0 });
+          } else {
+            goToProfile(item);
+          }
+        }}
+        onLongPress={() => handleDelete(item)}
+        style={{ position: "relative" }}
+      >
         <LinearGradient colors={["#22c55e", "#16a34a"]} style={styles.bubbleRing}>
           <Image source={resolveSource(item.avatar)} style={styles.bubbleAvatar} />
         </LinearGradient>
         {item.isOnline && <View style={[styles.onlineDot, { bottom: 2, right: 2 }]} />}
-      </View>
-      <Text style={styles.bubbleName} numberOfLines={1}>{item.display_name}</Text>
-    </TouchableOpacity>
+      </TouchableOpacity>
+      {/* Nombre: tap abre chat */}
+      <TouchableOpacity onPress={() => goToChat(item)}>
+        <Text style={styles.bubbleName} numberOfLines={1}>{item.display_name}</Text>
+      </TouchableOpacity>
+    </View>
   );
 
   return (
     <View style={styles.container}>
       {/* HEADER */}
       <LinearGradient colors={["#0f0f0f", "#0a0a0a"]} style={styles.header}>
-        <Text style={styles.headerTitle}>Matches</Text>
-        <Text style={styles.headerCount}>{matches.length} conexiones</Text>
+        <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.headerTitle}>Matches</Text>
+            <Text style={styles.headerCount}>{visibleMatches.length} conexiones · mantén apretado para borrar</Text>
+          </View>
+          <View style={{ position: "relative", paddingTop: 8, paddingRight: 8 }}>
+            <TouchableOpacity
+              onPress={() => navigation.navigate("SuperMatchInbox")}
+              style={{
+                flexDirection: "row",
+                alignItems: "center",
+                gap: 6,
+                backgroundColor: unreadSuperCount > 0 ? "#22c55e" : "rgba(34,197,94,0.15)",
+                paddingHorizontal: 14,
+                paddingVertical: 9,
+                borderRadius: 20,
+                borderWidth: 1,
+                borderColor: "#22c55e",
+              }}
+            >
+              <Ionicons name="star" size={18} color={unreadSuperCount > 0 ? "white" : "#22c55e"} />
+              <Text style={{ color: unreadSuperCount > 0 ? "white" : "#22c55e", fontWeight: "bold", fontSize: 13 }}>Super</Text>
+            </TouchableOpacity>
+            {unreadSuperCount > 0 && (
+              <View style={{
+                position: "absolute",
+                top: 0,
+                right: 0,
+                backgroundColor: "#ef4444",
+                borderRadius: 12,
+                minWidth: 24,
+                height: 24,
+                paddingHorizontal: 6,
+                justifyContent: "center",
+                alignItems: "center",
+                borderWidth: 2,
+                borderColor: "#000",
+                zIndex: 10,
+              }}>
+                <Text style={{ color: "white", fontSize: 12, fontWeight: "bold" }}>{unreadSuperCount}</Text>
+              </View>
+            )}
+          </View>
+        </View>
       </LinearGradient>
 
       {/* BÚSQUEDA */}
@@ -237,7 +396,24 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     borderBottomWidth: 1,
     borderColor: "#111",
+    position: "relative",
   },
+  cardNew: {
+    backgroundColor: "rgba(34,197,94,0.06)",
+    borderLeftWidth: 3,
+    borderLeftColor: "#22c55e",
+  },
+  newBadge: {
+    position: "absolute",
+    top: 8,
+    right: 16,
+    backgroundColor: "#22c55e",
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 6,
+    zIndex: 10,
+  },
+  newBadgeText: { color: "white", fontSize: 9, fontWeight: "bold", letterSpacing: 0.5 },
   avatar: { width: 56, height: 56, borderRadius: 28, marginRight: 12 },
   cardInfo: { flex: 1 },
   name: { color: "white", fontSize: 16, fontWeight: "700" },

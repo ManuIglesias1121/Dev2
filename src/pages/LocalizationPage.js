@@ -200,6 +200,19 @@ export default function LocalizationPage() {
           <Ionicons name={isTraveling ? 'checkmark-circle' : 'chevron-forward'} size={20} color="#ff6b9d" />
         </TouchableOpacity>
 
+        {/* ACCESO A ENCUENTROS */}
+        <TouchableOpacity
+          style={[styles.travelBtn, { borderColor: '#22c55e', backgroundColor: 'rgba(34,197,94,0.08)', marginTop: 12 }]}
+          onPress={() => navigation.navigate('Events')}
+        >
+          <Text style={{ fontSize: 22 }}>🐺</Text>
+          <View style={{ flex: 1, marginLeft: 12 }}>
+            <Text style={styles.travelLabel}>Encuentros de la manada</Text>
+            <Text style={styles.travelSub}>Asistí o organizá encuentros con therians</Text>
+          </View>
+          <Ionicons name="chevron-forward" size={20} color="#22c55e" />
+        </TouchableOpacity>
+
         {/* CIUDADES */}
         {!isTraveling && cities.length > 0 && (
           <View style={styles.section}>

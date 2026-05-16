@@ -6,7 +6,7 @@
 
 ## 1. ACEPTACIÓN DE TÉRMINOS
 
-Al descargar, instalar o usar la aplicación **TherianMatch** (en adelante, "la App"), aceptás estar legalmente vinculado por estos Términos y Condiciones (en adelante, "Términos"). Si no aceptás estos Términos, no debés usar la App.
+Al descargar, instalar o usar la aplicación **TherianMatchConnect** (en adelante, "la App"), aceptás estar legalmente vinculado por estos Términos y Condiciones (en adelante, "Términos"). Si no aceptás estos Términos, no debés usar la App.
 
 Estos Términos se rigen por las leyes de la **República Argentina**, incluyendo la **Ley 24.240 de Defensa del Consumidor** y la **Ley 25.326 de Protección de Datos Personales**, sin perjuicio de los derechos que correspondan a usuarios de otros países bajo su legislación local.
 
@@ -19,7 +19,7 @@ Estos Términos se rigen por las leyes de la **República Argentina**, incluyend
 - **"Contenido"**: Fotos, textos, moods y cualquier dato que cargues
 - **"Servicios"**: Todas las funcionalidades ofrecidas por la App
 - **"Planes"**: Las suscripciones pagas (Iniciante, Cazador, Depredador, Élite)
-- **"Responsable"**: TherianMatch / [Nombre legal del desarrollador], CUIT [CUIT], con domicilio en [Dirección legal, Ciudad, Argentina]
+- **"Responsable"**: TherianMatchConnect / [Nombre legal del desarrollador], CUIT [CUIT], con domicilio en [Dirección legal, Ciudad, Argentina]
 
 ---
 
@@ -102,7 +102,7 @@ Estos Términos se rigen por las leyes de la **República Argentina**, incluyend
 
 ### 5.4 Anti-doxxing y protección de identidad
 
-Al unirte a TherianMatch, aceptás que la información de otros usuarios (theriotype, identidad de género, orientación, ubicación, fotos, conversaciones) se comparte bajo **expectativa razonable de privacidad dentro del ecosistema cerrado de la App**.
+Al unirte a TherianMatchConnect, aceptás que la información de otros usuarios (theriotype, identidad de género, orientación, ubicación, fotos, conversaciones) se comparte bajo **expectativa razonable de privacidad dentro del ecosistema cerrado de la App**.
 
 **Sancionable con bloqueo permanente sin advertencia:**
 - Hacer público (redes sociales, foros, mensajería externa) cualquier dato de otro usuario obtenido en la App
@@ -216,7 +216,7 @@ La cancelación detiene la renovación pero no interrumpe el acceso hasta el fin
 
 Si adquiriste un plan desde Argentina tenés **10 días hábiles desde la fecha de compra** para arrepentirte y solicitar el reembolso completo, sin necesidad de dar explicaciones, siempre que no hayas hecho uso significativo de las funcionalidades premium.
 
-Para ejercer este derecho contactá a: **legal@therianmatch.app** indicando tu email de cuenta y fecha de compra. Procesamos el reembolso dentro de los 10 días hábiles siguientes.
+Para ejercer este derecho contactá a: **soportetherianmatch@gmail.com** indicando tu email de cuenta y fecha de compra. Procesamos el reembolso dentro de los 10 días hábiles siguientes.
 
 ### 7.5 Política de reembolsos (usuarios fuera de Argentina)
 
@@ -319,7 +319,7 @@ Te notificaremos con al menos **30 días de anticipación** ante aumentos de pre
 ## 14. RECLAMOS Y CONTACTO
 
 **Para consultas sobre estos Términos o reclamos de consumidores:**
-- Email: legal@therianmatch.app
+- Email: soportetherianmatch@gmail.com
 - Dirección: [Dirección legal, Ciudad, Argentina]
 - Teléfono: [Teléfono de contacto]
 

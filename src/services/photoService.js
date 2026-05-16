@@ -4,10 +4,20 @@ import { supabase } from "./supabase";
 
 const AVATARS_BUCKET = "avatars";
 const EXCLUSIVE_BUCKET = "exclusive-photos";
-const MAX_PUBLIC_PHOTOS = 6;
+const CHAT_IMAGES_BUCKET = "chat-images";
+
+// Límites de fotos según tipo de cuenta
+const MAX_PUBLIC_PHOTOS_FREE = 6;
+const MAX_PUBLIC_PHOTOS_PREMIUM = 12;
 const MAX_EXCLUSIVE_PHOTOS = 12;
 
-export { MAX_PUBLIC_PHOTOS, MAX_EXCLUSIVE_PHOTOS };
+export function getMaxPublicPhotos(isPremium) {
+  return isPremium ? MAX_PUBLIC_PHOTOS_PREMIUM : MAX_PUBLIC_PHOTOS_FREE;
+}
+
+// Backwards compat (default 6 si no se especifica)
+export const MAX_PUBLIC_PHOTOS = MAX_PUBLIC_PHOTOS_FREE;
+export { MAX_EXCLUSIVE_PHOTOS };
 
 // Lee el archivo local y lo convierte a ArrayBuffer (método confiable en RN/Expo)
 async function uriToArrayBuffer(uri) {
@@ -22,15 +32,26 @@ function getExtension(uri) {
   return ["jpg", "jpeg", "png", "webp"].includes(ext) ? ext : "jpg";
 }
 
+// Genera un sufijo único para evitar colisión de timestamps cuando se suben
+// múltiples fotos en paralelo (Date.now() puede repetirse al milisegundo)
+function uniqueSuffix() {
+  return `${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
+}
+
 // Sube la foto de perfil principal (avatar)
+// Usa filename único para evitar caché de React Native
 export async function uploadAvatar(userId, localUri) {
   const ext = getExtension(localUri);
-  const path = `${userId}/avatar.${ext}`;
+  const path = `${userId}/avatar_${uniqueSuffix()}.${ext}`;
   const arrayBuffer = await uriToArrayBuffer(localUri);
+
+  if (!arrayBuffer || arrayBuffer.byteLength === 0) {
+    throw new Error("La imagen está vacía o no se pudo leer del dispositivo");
+  }
 
   const { error } = await supabase.storage
     .from(AVATARS_BUCKET)
-    .upload(path, arrayBuffer, { contentType: `image/${ext}`, upsert: true });
+    .upload(path, arrayBuffer, { contentType: `image/${ext}` });
 
   if (error) throw error;
 
@@ -41,7 +62,7 @@ export async function uploadAvatar(userId, localUri) {
 // Sube una foto pública del perfil (visible para todos)
 export async function uploadPublicPhoto(userId, localUri) {
   const ext = getExtension(localUri);
-  const path = `${userId}/${Date.now()}.${ext}`;
+  const path = `${userId}/${uniqueSuffix()}.${ext}`;
   const arrayBuffer = await uriToArrayBuffer(localUri);
 
   const { error } = await supabase.storage
@@ -54,19 +75,55 @@ export async function uploadPublicPhoto(userId, localUri) {
   return data.publicUrl;
 }
 
-// Sube una foto exclusiva (solo visible para usuarios premium)
-export async function uploadExclusivePhoto(userId, localUri) {
+// Sube una imagen para mandar en chat
+export async function uploadChatImage(userId, localUri) {
   const ext = getExtension(localUri);
-  const path = `${userId}/${Date.now()}.${ext}`;
+  const path = `${userId}/${uniqueSuffix()}.${ext}`;
   const arrayBuffer = await uriToArrayBuffer(localUri);
 
+  if (!arrayBuffer || arrayBuffer.byteLength === 0) {
+    throw new Error("La imagen está vacía o no se pudo leer del dispositivo");
+  }
+
   const { error } = await supabase.storage
-    .from(EXCLUSIVE_BUCKET)
+    .from(CHAT_IMAGES_BUCKET)
     .upload(path, arrayBuffer, { contentType: `image/${ext}` });
 
   if (error) throw error;
 
-  return path; // Guardamos el path, no la URL (necesita signed URL para verse)
+  const { data } = supabase.storage.from(CHAT_IMAGES_BUCKET).getPublicUrl(path);
+  return data.publicUrl;
+}
+
+// Sube una foto exclusiva (solo visible para usuarios premium)
+export async function uploadExclusivePhoto(userId, localUri) {
+  const ext = getExtension(localUri);
+  const path = `${userId}/${uniqueSuffix()}.${ext}`;
+  const arrayBuffer = await uriToArrayBuffer(localUri);
+
+  // Verificar tamaño antes de subir (ArrayBuffer.byteLength)
+  if (!arrayBuffer || arrayBuffer.byteLength === 0) {
+    throw new Error("La imagen está vacía o no se pudo leer del dispositivo");
+  }
+
+  const { data, error } = await supabase.storage
+    .from(EXCLUSIVE_BUCKET)
+    .upload(path, arrayBuffer, { contentType: `image/${ext}` });
+
+  if (error) throw error;
+  if (!data?.path) throw new Error("Upload no devolvió path — falló silenciosamente");
+
+  // Verificar que el archivo realmente quedó subido generando una signed URL
+  // Si no se puede generar, el archivo no existe en el bucket
+  const { error: verifyError } = await supabase.storage
+    .from(EXCLUSIVE_BUCKET)
+    .createSignedUrl(path, 60);
+
+  if (verifyError) {
+    throw new Error(`El archivo no quedó guardado: ${verifyError.message}`);
+  }
+
+  return path;
 }
 
 // Genera URL firmada temporal para fotos exclusivas (1 hora)

@@ -21,7 +21,6 @@ import {
   Text,
   TextInput,
   TouchableOpacity,
-  Vibration,
   View,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
@@ -33,6 +32,7 @@ import { saveData, loadData, STORAGE_KEYS } from "../services/storageService";
 import { analyzeMessage, WARNING_MESSAGES, getCooldownHours, getCooldownMessage } from "../services/contentFilter";
 import { blockUser, reportUser, REPORT_REASONS, callEmergency } from "../services/safetyService";
 import { supabase } from "../services/supabase";
+import { uploadChatImage } from "../services/photoService";
 import {
   getOrCreateConversation,
   fetchMessages as fetchRealMessages,
@@ -93,7 +93,7 @@ export default function ChatRoomPage() {
   const route = useRoute();
   const navigation = useNavigation();
   const params = route.params ?? {};
-  const { user } = useContext(AuthContext);
+  const { user, setActiveConversationId } = useContext(AuthContext);
   const { hasFeature } = useFeatures();
   const insets = useSafeAreaInsets();
 
@@ -120,6 +120,14 @@ export default function ChatRoomPage() {
   const flatListRef = useRef(null);
   const STRIKES_KEY = `chat_strikes_${contactId}`;
   const COOLDOWN_KEY = `chat_cooldown_${contactId}`;
+
+  // Marcar esta conversación como activa para silenciar la notificación global
+  // mientras el usuario está leyendo este chat
+  useEffect(() => {
+    if (!conversationId) return;
+    setActiveConversationId(conversationId);
+    return () => setActiveConversationId(null);
+  }, [conversationId, setActiveConversationId]);
 
   // Cargar strikes y cooldown del chat
   useEffect(() => {
@@ -155,10 +163,11 @@ export default function ChatRoomPage() {
 
         await markAsRead(conv.id, user.supabaseId);
 
-        // Suscripción en tiempo real
+        // Suscripción en tiempo real (solo para mensajes de OTROS — los míos los agrego con optimistic update)
         unsubscribe = subscribeToMessages(conv.id, (newMsg) => {
+          if (newMsg.sender_id === user.supabaseId) return; // Ignorar propios
+
           setMessages((prev) => {
-            // Evitar duplicar si ya existe (por el optimistic update)
             if (prev.find((m) => m.id === newMsg.id)) return prev;
             return [
               ...prev,
@@ -166,16 +175,13 @@ export default function ChatRoomPage() {
                 id: newMsg.id,
                 text: newMsg.content,
                 image: newMsg.image_url,
-                fromMe: newMsg.sender_id === user.supabaseId,
+                fromMe: false,
                 created_at: newMsg.created_at,
                 read_at: newMsg.read_at,
               },
             ];
           });
-          // Si lo recibí yo, marcar como leído
-          if (newMsg.sender_id !== user.supabaseId) {
-            markAsRead(conv.id, user.supabaseId);
-          }
+          markAsRead(conv.id, user.supabaseId);
           scrollToBottom();
         });
       } catch (e) {
@@ -207,13 +213,11 @@ export default function ChatRoomPage() {
   }, [contactId, targetUserId, isRealChat]);
 
   // Agrega el contacto a la lista cuando el usuario realmente interactúa
+  // Si fue eliminado previamente, NO vuelve a la lista (se respeta el delete)
   const ensureContactInList = async () => {
     const deleted = await loadData(STORAGE_KEYS.DELETED_CONTACTS, []);
-    // Si fue eliminado y vuelve a chatear, lo sacamos de "eliminados"
-    if (deleted.includes(contactId)) {
-      const cleanedDeleted = deleted.filter((id) => id !== contactId);
-      await saveData(STORAGE_KEYS.DELETED_CONTACTS, cleanedDeleted);
-    }
+    if (deleted.includes(contactId)) return; // permanece eliminado
+
     const contacts = await loadData(STORAGE_KEYS.CHAT_CONTACTS, []);
     const exists = contacts.find((c) => c.contactId === contactId);
     if (!exists) {
@@ -236,8 +240,6 @@ export default function ChatRoomPage() {
   };
 
   const proceedToSend = async (text) => {
-    if (hasFeature("soundEffects")) Vibration.vibrate(20);
-
     if (isRealChat && conversationId) {
       // Modo REAL: enviar a Supabase
       const tempId = `temp_${Date.now()}`;
@@ -371,7 +373,6 @@ export default function ChatRoomPage() {
         persistMessages(next);
         return next;
       });
-      if (hasFeature("soundEffects")) Vibration.vibrate(40);
       scrollToBottom();
     }, 1200 + Math.random() * 800);
   };
@@ -458,21 +459,52 @@ export default function ChatRoomPage() {
 
   const sendImage = async () => {
     if (!hasFeature("sendImages")) {
-      alert("Necesitás un plan premium para enviar imágenes 📦");
+      Alert.alert("Premium requerido", "Necesitás un plan premium para enviar imágenes 📦");
       return;
     }
     const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      mediaTypes: ["images"],
       allowsEditing: true,
       quality: 0.8,
     });
-    if (!result.canceled && result.assets?.[0]) {
-      const msg = { id: Date.now(), image: result.assets[0].uri, fromMe: true, created_at: new Date().toISOString() };
-      const updated = [...messages, msg];
-      setMessages(updated);
-      persistMessages(updated);
+    if (result.canceled || !result.assets?.[0]) return;
+
+    const localUri = result.assets[0].uri;
+
+    // Modo REAL: subir a Supabase + insertar mensaje
+    if (isRealChat && conversationId && user?.supabaseId) {
+      const tempId = `temp_${Date.now()}`;
+      const optimistic = { id: tempId, image: localUri, fromMe: true, created_at: new Date().toISOString() };
+      setMessages((prev) => [...prev, optimistic]);
       scrollToBottom();
+      try {
+        const imageUrl = await uploadChatImage(user.supabaseId, localUri);
+        const sent = await sendRealMessage({
+          conversationId,
+          senderId: user.supabaseId,
+          imageUrl,
+        });
+        setMessages((prev) =>
+          prev.map((m) =>
+            m.id === tempId
+              ? { id: sent.id, image: sent.image_url, fromMe: true, created_at: sent.created_at }
+              : m
+          )
+        );
+      } catch (e) {
+        console.error("Error enviando imagen:", e);
+        setMessages((prev) => prev.filter((m) => m.id !== tempId));
+        Alert.alert("Error", "No se pudo enviar la foto: " + (e?.message || "intentá de nuevo"));
+      }
+      return;
     }
+
+    // Modo FAKE: solo local
+    const msg = { id: Date.now(), image: localUri, fromMe: true, created_at: new Date().toISOString() };
+    const updated = [...messages, msg];
+    setMessages(updated);
+    persistMessages(updated);
+    scrollToBottom();
   };
 
   return (

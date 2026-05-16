@@ -13,6 +13,20 @@ import GiftShopPage from "../pages/GiftShopPage";
 import PremiumPlansPage from "../pages/PremiumPlansPage";
 import SafetyCenter from "../screens/SafetyCenter";
 import SafeDateMode from "../screens/SafeDateMode";
+import SoundSettings from "../screens/SoundSettings";
+import SuperMatchInbox from "../screens/SuperMatchInbox";
+import VisitorsPage from "../pages/VisitorsPage";
+import PremiumPage from "../pages/PremiumPage";
+import EventsListPage from "../pages/EventsListPage";
+import EventCreatePage from "../pages/EventCreatePage";
+import EventDetailPage from "../pages/EventDetailPage";
+import { useAuth } from "../contexts/AuthContext";
+
+// Wrapper para Visitors que muestra Premium si no es premium
+function VisitorsScreen() {
+  const { user } = useAuth();
+  return user?.isPremium ? <VisitorsPage /> : <PremiumPage />;
+}
 
 const Stack = createStackNavigator();
 
@@ -32,6 +46,12 @@ export default function AppNavigator() {
       <Stack.Screen name="PremiumPlans" component={PremiumPlansPage} />
       <Stack.Screen name="SafetyCenter" component={SafetyCenter} />
       <Stack.Screen name="SafeDateMode" component={SafeDateMode} />
+      <Stack.Screen name="SoundSettings" component={SoundSettings} />
+      <Stack.Screen name="SuperMatchInbox" component={SuperMatchInbox} />
+      <Stack.Screen name="Visitors" component={VisitorsScreen} />
+      <Stack.Screen name="Events" component={EventsListPage} />
+      <Stack.Screen name="EventCreate" component={EventCreatePage} />
+      <Stack.Screen name="EventDetail" component={EventDetailPage} />
     </Stack.Navigator>
   );
 }

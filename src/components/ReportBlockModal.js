@@ -8,6 +8,7 @@ import {
   View,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useAuth } from "../contexts/AuthContext";
 
 const REPORT_REASONS = [
@@ -21,6 +22,7 @@ const REPORT_REASONS = [
 
 export default function ReportBlockModal({ visible, onClose, profile }) {
   const { blockUser } = useAuth();
+  const insets = useSafeAreaInsets();
   const [step, setStep] = useState("menu"); // menu | report | done
   const [selectedReason, setSelectedReason] = useState(null);
   const [details, setDetails] = useState("");
@@ -68,6 +70,7 @@ export default function ReportBlockModal({ visible, onClose, profile }) {
           borderTopLeftRadius: 24,
           borderTopRightRadius: 24,
           padding: 24,
+          paddingBottom: 24 + Math.max(insets.bottom, 8),
           borderTopWidth: 1,
           borderColor: "#1e1e1e",
         }}>

@@ -18,6 +18,8 @@ import SuperMatchButton from "../components/buttons/SuperMatchButton";
 import ReportBlockModal from "../components/ReportBlockModal";
 import { AuthContext } from "../contexts/AuthContext";
 import { getExclusivePhotoUrls } from "../services/photoService";
+import { sendSuperMatch } from "../services/superMatchService";
+import { trackVisit } from "../services/visitorsService";
 
 function InfoBadge({ icon, text }) {
   return (
@@ -49,6 +51,14 @@ export default function ProfileDetailPage({ route, navigation }) {
     }
   }, []);
 
+  // Registrar visita al perfil (solo entre usuarios reales)
+  useEffect(() => {
+    const isRealUser = profile.id && typeof profile.id === "string" && profile.id.length > 30;
+    if (isRealUser && user?.supabaseId && profile.id !== user.supabaseId) {
+      trackVisit({ visitorId: user.supabaseId, visitedId: profile.id }).catch(() => {});
+    }
+  }, [profile.id, user?.supabaseId]);
+
   // Bloquear capturas de pantalla y detectar intentos (iOS)
   useEffect(() => {
     if (!hasExclusive) return;
@@ -79,12 +89,32 @@ export default function ProfileDetailPage({ route, navigation }) {
     };
   }, [hasExclusive]);
 
-  const handleSuperMatch = () => {
+  const handleSuperMatch = async () => {
     if (!user?.isPremium) {
       navigation.navigate("PremiumPlans");
       return;
     }
-    alert(`Super Match enviado a ${profile.display_name} 🐺✨`);
+
+    // Solo se puede super-matchear a usuarios reales (UUID)
+    const isRealUser = profile.id && typeof profile.id === "string" && profile.id.length > 30;
+    if (!isRealUser) {
+      Alert.alert("Super Match", `Este perfil es de demostración. Probá con un usuario real.`);
+      return;
+    }
+
+    try {
+      const result = await sendSuperMatch({
+        senderId: user.supabaseId,
+        receiverId: profile.id,
+      });
+      if (result === null) {
+        Alert.alert("Ya enviado", `Ya le habías mandado un Super Match a ${profile.display_name}.`);
+      } else {
+        Alert.alert("✨ Super Match enviado", `Le va a llegar a ${profile.display_name} en tiempo real.`);
+      }
+    } catch (e) {
+      Alert.alert("Error", e?.message || "No se pudo enviar el Super Match.");
+    }
   };
 
   const habitatEmoji = {

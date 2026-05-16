@@ -39,7 +39,7 @@ export default function SplashScreen({ onFinish }) {
             textAlign: "center",
           }}
         >
-          TherianMatch
+          TherianMatchConnect
         </Text>
       </Animated.View>
     </LinearGradient>

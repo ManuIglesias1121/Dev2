@@ -63,7 +63,7 @@ export default function SafeDateMode({ navigation }) {
       ? `\n\nMi ubicación actual: https://maps.google.com/?q=${loc.latitude},${loc.longitude}`
       : "";
 
-    const message = `🛡️ Hola ${contactName}, estoy activando Modo Cita Segura desde TherianMatch.
+    const message = `🛡️ Hola ${contactName}, estoy activando Modo Cita Segura desde TherianMatchConnect.
 
 📍 Lugar: ${meetingPlace}
 🕐 Hora: ${meetingTime || "no especificada"}

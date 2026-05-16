@@ -63,7 +63,7 @@ export function analyzeMessage(text) {
 export const WARNING_MESSAGES = {
   hate: {
     title: "Lenguaje discriminatorio detectado",
-    body: "Tu mensaje contiene términos que podrían ser ofensivos o discriminatorios. La discriminación por theriotype, género, orientación o identidad está prohibida en TherianMatch.",
+    body: "Tu mensaje contiene términos que podrían ser ofensivos o discriminatorios. La discriminación por theriotype, género, orientación o identidad está prohibida en TherianMatchConnect.",
   },
   threat: {
     title: "Posible amenaza detectada",

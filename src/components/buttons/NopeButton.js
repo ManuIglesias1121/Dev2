@@ -1,5 +1,6 @@
 import React, { useRef } from "react";
-import { StyleSheet, Text, TouchableOpacity, View, Animated } from "react-native";
+import { StyleSheet, TouchableOpacity, View, Animated } from "react-native";
+import { Ionicons } from "@expo/vector-icons";
 
 export default function NopeButton({ onPress }) {
   const scaleAnim = useRef(new Animated.Value(1)).current;
@@ -30,7 +31,7 @@ export default function NopeButton({ onPress }) {
         activeOpacity={0.8}
       >
         <View style={styles.iconContainer}>
-          <Text style={styles.cross}>✖</Text>
+          <Ionicons name="close" size={38} color="#16a34a" />
         </View>
       </TouchableOpacity>
     </Animated.View>

@@ -40,7 +40,7 @@ export async function reverseGeocode(latitude, longitude) {
   try {
     const res = await fetch(
       `https://nominatim.openstreetmap.org/reverse?lat=${latitude}&lon=${longitude}&format=json&addressdetails=1`,
-      { headers: { "Accept-Language": "es", "User-Agent": "TherianMatch/1.0" } }
+      { headers: { "Accept-Language": "es", "User-Agent": "TherianMatchConnect/1.0" } }
     );
     const data = await res.json();
     if (data?.address) {

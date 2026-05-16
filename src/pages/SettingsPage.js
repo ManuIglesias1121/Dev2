@@ -83,18 +83,26 @@ export default function SettingsPage({ navigation }) {
   const handleClearBotData = () => {
     Alert.alert(
       "Limpiar datos de prueba",
-      "Se eliminarán todos los chats y matches de bots. Esta acción no se puede deshacer.",
+      "Se eliminarán todos los chats y matches de bots, y no volverán a aparecer. Esta acción no se puede deshacer.",
       [
         { text: "Cancelar", style: "cancel" },
         {
           text: "Limpiar",
           style: "destructive",
           onPress: async () => {
+            // Tomar contactIds existentes para marcarlos como eliminados permanentemente
+            const existing = await (await import("../services/storageService")).loadData(STORAGE_KEYS.CHAT_CONTACTS, []);
+            const existingIds = existing.map((c) => c.contactId);
+            const deleted = await (await import("../services/storageService")).loadData(STORAGE_KEYS.DELETED_CONTACTS, []);
+            const allDeleted = [...new Set([...deleted, ...existingIds, "default"])];
+
+            await saveData(STORAGE_KEYS.DELETED_CONTACTS, allDeleted);
             await saveData(STORAGE_KEYS.CHAT_CONTACTS, []);
             await saveData(STORAGE_KEYS.CHATS, []);
             await saveData(STORAGE_KEYS.MATCHES, []);
             await saveData(STORAGE_KEYS.CHAT_CONTACTS + "_supermatches", []);
-            Alert.alert("¡Listo!", "Chats y matches de bots eliminados.");
+            await saveData("sent_super_matches", []);
+            Alert.alert("¡Listo!", "Chats y matches de bots eliminados permanentemente.");
           },
         },
       ]
@@ -168,6 +176,13 @@ export default function SettingsPage({ navigation }) {
           label="Modo Cita Segura"
           sublabel="Compartir ubicación con un contacto de confianza"
           onPress={() => navigation.navigate("SafeDateMode")}
+        />
+        <Row
+          icon="notifications-outline"
+          iconColor="#3b82f6"
+          label="Sonidos y Vibración"
+          sublabel="Personalizar alertas por función"
+          onPress={() => navigation.navigate("SoundSettings")}
           last
         />
       </Section>
@@ -234,7 +249,7 @@ export default function SettingsPage({ navigation }) {
       </View>
 
       <Text style={{ color: "#333", textAlign: "center", fontSize: 12, marginBottom: 20 }}>
-        TherianMatch v1.0.0 • Hecho con ❤️
+        TherianMatchConnect v1.0.0 • Hecho con ❤️
       </Text>
     </ScrollView>
   );

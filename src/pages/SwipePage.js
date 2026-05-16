@@ -17,6 +17,7 @@ import SwipeCard from "../components/SwipeCard";
 import BannerAdComponent from "../components/BannerAdComponent";
 import { getTherianProfiles } from "../services/profilesService";
 import { showInterstitialAd } from "../services/adService";
+import { sendSuperMatch } from "../services/superMatchService";
 import { useAuth } from "../contexts/AuthContext";
 import { saveData, loadData, STORAGE_KEYS } from "../services/storageService";
 
@@ -108,21 +109,44 @@ export default function SwipePage() {
 
   const handleSuperLike = async () => {
     if (!current) return;
-    // Los super likes que YO doy van a "sent_super_matches"
-    const existing = await loadData("sent_super_matches", []);
-    const alreadyExists = existing.find((m) => m.id === current.id);
-    if (!alreadyExists) {
-      const newMatch = {
-        id: current.id || Date.now(),
-        sender: {
-          display_name: current.display_name || current.name,
-          avatar: current.avatar,
-          photos: current.photos || (current.avatar ? [current.avatar] : []),
-          primary_theriotype: current.primary_theriotype,
-        },
-        created_at: new Date().toISOString(),
-      };
-      await saveData("sent_super_matches", [newMatch, ...existing]);
+
+    const isRealUser = current.id && typeof current.id === "string" && current.id.length > 30;
+    let sentToSupabase = false;
+
+    if (isRealUser && user?.supabaseId) {
+      try {
+        const result = await sendSuperMatch({ senderId: user.supabaseId, receiverId: current.id });
+        sentToSupabase = true;
+        if (result) {
+          alert(`✨ Super Match enviado a ${current.display_name || current.name}`);
+        }
+      } catch (e) {
+        console.error("Error enviando super match:", e);
+        alert(`Error enviando Super Match: ${e?.message || "error desconocido"}`);
+      }
+    } else if (isRealUser && !user?.supabaseId) {
+      alert("Error: tu sesión no tiene supabaseId. Cerrá sesión y volvé a entrar.");
+    }
+
+    // Solo guardar local si NO se envió a Supabase (fallback offline)
+    // O si es un perfil fake (no UUID). Esto evita duplicados.
+    if (!sentToSupabase) {
+      const existing = await loadData("sent_super_matches", []);
+      const alreadyExists = existing.find((m) => m.id === current.id);
+      if (!alreadyExists) {
+        const newMatch = {
+          id: current.id || Date.now(),
+          sender: {
+            id: current.id,
+            display_name: current.display_name || current.name,
+            avatar: current.avatar,
+            photos: current.photos || (current.avatar ? [current.avatar] : []),
+            primary_theriotype: current.primary_theriotype,
+          },
+          created_at: new Date().toISOString(),
+        };
+        await saveData("sent_super_matches", [newMatch, ...existing]);
+      }
     }
     handleSwipe();
   };
@@ -159,7 +183,7 @@ export default function SwipePage() {
     <View style={styles.container}>
       {/* HEADER */}
       <View style={styles.header}>
-        <Text style={styles.logo}>TherianMatch</Text>
+        <Text style={styles.logo}>TherianMatchConnect</Text>
         <TouchableOpacity onPress={() => { setPendingFilters(filters); setShowFilters(true); }} style={styles.filterBtn}>
           <Ionicons name="options-outline" size={22} color={filtersActive ? "#22c55e" : "white"} />
           {filtersActive && <View style={styles.filterDot} />}

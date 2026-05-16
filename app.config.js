@@ -1,6 +1,6 @@
 export default {
   expo: {
-    name: "therianmatch",
+    name: "TherianMatchConnect",
     slug: "therianmatch",
     version: "1.0.0",
     orientation: "portrait",
@@ -14,11 +14,12 @@ export default {
     assetBundlePatterns: ["**/*"],
 
     ios: {
-      supportsTablet: true
+      supportsTablet: true,
+      bundleIdentifier: "com.manuiglesias.therianmatchconnect"
     },
 
     android: {
-      package: "com.manuiglesias.therianmatch",
+      package: "com.manuiglesias.therianmatchconnect",
       edgeToEdgeEnabled: true,
       permissions: [
         "android.permission.READ_MEDIA_IMAGES",
@@ -31,14 +32,14 @@ export default {
       [
         "expo-image-picker",
         {
-          photosPermission: "TherianMatch necesita acceso a tu galería para cambiar tu foto de perfil.",
-          cameraPermission: "TherianMatch necesita acceso a tu cámara.",
+          photosPermission: "TherianMatchConnect necesita acceso a tu galería para cambiar tu foto de perfil.",
+          cameraPermission: "TherianMatchConnect necesita acceso a tu cámara.",
         }
       ],
       [
         "expo-location",
         {
-          locationAlwaysAndWhenInUsePermission: "TherianMatch usa tu ubicación para mostrarte perfiles cercanos."
+          locationAlwaysAndWhenInUsePermission: "TherianMatchConnect usa tu ubicación para mostrarte perfiles cercanos."
         }
       ]
     ],
@@ -47,8 +48,8 @@ export default {
       favicon: "./assets/favicon.png",
       bundler: "metro",
       output: "single",
-      name: "TherianMatch",
-      shortName: "TherianMatch",
+      name: "TherianMatchConnect",
+      shortName: "TherianMatchConnect",
       description: "Encuentra tu manada",
       themeColor: "#22c55e",
       backgroundColor: "#000000",

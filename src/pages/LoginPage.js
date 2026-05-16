@@ -115,7 +115,7 @@ export default function LoginPage({ navigation }) {
     if (!mod) return;
 
     const result = await mod.authenticateAsync({
-      promptMessage: "Desbloquea TherianMatch",
+      promptMessage: "Desbloquea TherianMatchConnect",
       cancelLabel: "Cancelar",
       fallbackLabel: "Usar contraseña",
     });
@@ -159,7 +159,7 @@ export default function LoginPage({ navigation }) {
             <Image source={require("../../assets/unico.png")} style={styles.logo} />
           </View>
 
-          <Text style={styles.title}>TherianMatch</Text>
+          <Text style={styles.title}>TherianMatchConnect</Text>
           <Text style={styles.subtitle}>Encuentra tu manada</Text>
 
           {/* FORM */}

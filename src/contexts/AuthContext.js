@@ -294,6 +294,8 @@ export function AuthProvider({ children }) {
   const [relationshipDays, setRelationshipDays] = useState(0);
   const [discoveryIndex, setDiscoveryIndex] = useState(0);
   const [blockedUsers, setBlockedUsers] = useState([]);
+  // Conversation ID que el usuario está viendo en este momento (para no sonar notif si ya está ahí)
+  const [activeConversationId, setActiveConversationId] = useState(null);
 
   // Al abrir: detectar sesión guardada pero NO auto-login (siempre pide auth)
   useEffect(() => {
@@ -640,6 +642,8 @@ export function AuthProvider({ children }) {
         blockUser,
         unblockUser,
         blockedUsers,
+        activeConversationId,
+        setActiveConversationId,
         PLAN_FEATURES,
         GIFT_FEATURES,
         ACHIEVEMENTS,
@@ -661,12 +665,14 @@ export function useFeatures() {
   const hasFeature = (featureName) => {
     if (!user) return false;
 
-    // Verificar si viene del plan
-    const planFeatures = PLAN_FEATURES[user.premiumPlan || "free"] || PLAN_FEATURES.free;
+    // Si es premium pero no tiene plan específico, asumir el más alto (anual)
+    const isPremium = user.isPremium || user.is_premium || false;
+    const plan = user.premiumPlan || (isPremium ? "anual" : "free");
+    const planFeatures = PLAN_FEATURES[plan] || PLAN_FEATURES.free;
     if (planFeatures[featureName]) return true;
 
     // Verificar si viene de un regalo
-    for (const giftId of user.gifts) {
+    for (const giftId of user.gifts || []) {
       const gift = GIFT_FEATURES[giftId];
       if (gift && gift.features.includes(featureName)) {
         return true;

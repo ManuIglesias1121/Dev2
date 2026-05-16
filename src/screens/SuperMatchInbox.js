@@ -1,9 +1,19 @@
 import { Ionicons } from "@expo/vector-icons";
-import React, { useState, useCallback } from "react";
+import React, { useState, useCallback, useEffect } from "react";
 import { Alert, Image, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useFocusEffect } from "@react-navigation/native";
 import { loadData, saveData, STORAGE_KEYS } from "../services/storageService";
 import { fakeSuperMatches } from "../data/fakeSuperMatches";
+import { useAuth } from "../contexts/AuthContext";
+import {
+  fetchReceivedSuperMatches,
+  fetchSentSuperMatches,
+  subscribeToSuperMatches,
+  deleteSuperMatchById,
+  markSuperMatchAsRead,
+} from "../services/superMatchService";
+import { playFeedback } from "../services/soundService";
 
 function resolveSource(img) {
   if (!img) return require("../../assets/logo1.png");
@@ -14,26 +24,75 @@ const DELETED_SUPER_MATCHES_KEY = "deleted_super_matches";
 const SENT_SUPER_MATCHES_KEY = "sent_super_matches";
 
 export default function SuperMatchInbox({ navigation }) {
+  const { user } = useAuth();
+  const insets = useSafeAreaInsets();
   const [received, setReceived] = useState([]);
   const [sent, setSent] = useState([]);
-  const [tab, setTab] = useState("received"); // "received" | "sent"
+  const [tab, setTab] = useState("received");
+
+  const loadAll = useCallback(async () => {
+    const deleted = await loadData(DELETED_SUPER_MATCHES_KEY, []);
+
+    // Recibidos: Supabase + locales (legacy) + fakes
+    let realReceived = [];
+    let realSent = [];
+    if (user?.supabaseId) {
+      try {
+        realReceived = await fetchReceivedSuperMatches(user.supabaseId);
+        realSent = await fetchSentSuperMatches(user.supabaseId);
+      } catch (e) {
+        console.warn("Error cargando super matches:", e?.message);
+      }
+    }
+
+    const savedReceivedLocal = await loadData(STORAGE_KEYS.CHAT_CONTACTS + "_supermatches", []);
+    const savedSentLocal = await loadData(SENT_SUPER_MATCHES_KEY, []);
+
+    const recv = [...realReceived, ...savedReceivedLocal, ...fakeSuperMatches].filter(
+      (m) => !deleted.includes(m.id)
+    );
+    const out = [...realSent, ...savedSentLocal].filter((m) => !deleted.includes(m.id));
+
+    // Dedupe por PERSONA (sender.id) y no por row id — para no mostrar
+    // el mismo super match dos veces (local + real, o duplicados)
+    // El primero en la lista gana (los reales de Supabase vienen primero)
+    const dedupeByPerson = (list) => {
+      const seen = new Set();
+      const result = [];
+      for (const m of list) {
+        const personKey = m.sender?.id || m.id; // fallback al row id si no hay sender.id
+        if (!seen.has(personKey)) {
+          seen.add(personKey);
+          result.push(m);
+        }
+      }
+      return result;
+    };
+
+    setReceived(dedupeByPerson(recv));
+    setSent(dedupeByPerson(out));
+
+    // Marcar como leídos los recibidos al entrar a la pantalla
+    realReceived.forEach((sm) => {
+      if (!sm.is_read) markSuperMatchAsRead(sm.id);
+    });
+  }, [user?.supabaseId]);
 
   useFocusEffect(
     useCallback(() => {
-      async function load() {
-        const savedReceived = await loadData(STORAGE_KEYS.CHAT_CONTACTS + "_supermatches", []);
-        const savedSent = await loadData(SENT_SUPER_MATCHES_KEY, []);
-        const deleted = await loadData(DELETED_SUPER_MATCHES_KEY, []);
-
-        const recv = [...savedReceived, ...fakeSuperMatches].filter((m) => !deleted.includes(m.id));
-        const out = savedSent.filter((m) => !deleted.includes(m.id));
-
-        setReceived(recv);
-        setSent(out);
-      }
-      load();
-    }, [])
+      loadAll();
+    }, [loadAll])
   );
+
+  // Realtime: cuando alguien nos manda un super match, recargar
+  useEffect(() => {
+    if (!user?.supabaseId) return;
+    const unsubscribe = subscribeToSuperMatches(user.supabaseId, () => {
+      playFeedback("superMatch");
+      loadAll();
+    });
+    return unsubscribe;
+  }, [user?.supabaseId, loadAll]);
 
   const deleteSuperMatch = (id) => {
     Alert.alert("Eliminar Super Match", "¿Quieres eliminar este Super Match?", [
@@ -41,6 +100,16 @@ export default function SuperMatchInbox({ navigation }) {
       {
         text: "Eliminar", style: "destructive",
         onPress: async () => {
+          // Si es UUID (real de Supabase), borrar de DB
+          const isRealId = typeof id === "string" && id.length > 30;
+          if (isRealId) {
+            try {
+              await deleteSuperMatchById(id);
+            } catch (e) {
+              console.warn("No se pudo borrar en DB:", e?.message);
+            }
+          }
+
           if (tab === "received") {
             setReceived((r) => r.filter((m) => m.id !== id));
             const saved = await loadData(STORAGE_KEYS.CHAT_CONTACTS + "_supermatches", []);
@@ -51,6 +120,7 @@ export default function SuperMatchInbox({ navigation }) {
             await saveData(SENT_SUPER_MATCHES_KEY, saved.filter((m) => m.id !== id));
           }
 
+          // Marcar localmente como eliminado para fakes (que no se pueden borrar de DB)
           const deleted = await loadData(DELETED_SUPER_MATCHES_KEY, []);
           if (!deleted.includes(id)) {
             await saveData(DELETED_SUPER_MATCHES_KEY, [...deleted, id]);
@@ -72,7 +142,7 @@ export default function SuperMatchInbox({ navigation }) {
   };
 
   return (
-    <ScrollView style={styles.container}>
+    <ScrollView style={styles.container} contentContainerStyle={{ paddingTop: insets.top + 12, paddingBottom: insets.bottom + 20 }}>
       <View style={styles.header}>
         <TouchableOpacity style={styles.backButton} onPress={handleBack}>
           <Ionicons name="chevron-back" size={28} color="white" />
@@ -109,26 +179,30 @@ export default function SuperMatchInbox({ navigation }) {
         </Text>
       )}
 
-      {list.map((item) => (
-        <TouchableOpacity
-          key={item.id}
-          style={styles.card}
-          onPress={() => navigation.navigate("SuperMatchDetail", { match: item })}
-          onLongPress={() => deleteSuperMatch(item.id)}
-        >
-          <Image source={resolveSource(item.sender.avatar)} style={styles.avatar} />
+      {list.map((item) => {
+        // Defensive: si el item no tiene sender, lo saltamos
+        if (!item || !item.sender) return null;
+        return (
+          <TouchableOpacity
+            key={item.id}
+            style={styles.card}
+            onPress={() => navigation.navigate("SuperMatchDetail", { match: item })}
+            onLongPress={() => deleteSuperMatch(item.id)}
+          >
+            <Image source={resolveSource(item.sender.avatar)} style={styles.avatar} />
 
-          <View style={{ flex: 1 }}>
-            <Text style={styles.name}>{item.sender.display_name}</Text>
-            <Text style={styles.type}>{item.sender.primary_theriotype}</Text>
-            <Text style={styles.time}>
-              {new Date(item.created_at).toLocaleString()}
-            </Text>
-          </View>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.name}>{item.sender.display_name || "Therian"}</Text>
+              <Text style={styles.type}>{item.sender.primary_theriotype || ""}</Text>
+              <Text style={styles.time}>
+                {item.created_at ? new Date(item.created_at).toLocaleString() : ""}
+              </Text>
+            </View>
 
-          <Text style={styles.icon}>✨</Text>
-        </TouchableOpacity>
-      ))}
+            <Text style={styles.icon}>✨</Text>
+          </TouchableOpacity>
+        );
+      })}
     </ScrollView>
   );
 }

@@ -168,7 +168,7 @@ export default function SafetyCenter({ navigation }) {
         </View>
 
         <Text style={styles.footer}>
-          TherianMatch tiene tolerancia cero ante violencia, acoso y discriminación.
+          TherianMatchConnect tiene tolerancia cero ante violencia, acoso y discriminación.
         </Text>
       </ScrollView>
     </View>
