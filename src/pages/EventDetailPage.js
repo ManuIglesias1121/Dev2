@@ -216,12 +216,32 @@ export default function EventDetailPage() {
             <Text style={styles.empty}>Nadie confirmó todavía. Sé el primero.</Text>
           ) : (
             <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginVertical: 10 }}>
-              {goingAttendees.map((a) => (
-                <View key={a.user_id} style={styles.attendeeBubble}>
-                  <Image source={resolveSource(a.avatar)} style={styles.attendeeAvatar} />
-                  <Text style={styles.attendeeName} numberOfLines={1}>{a.display_name}</Text>
-                </View>
-              ))}
+              {goingAttendees.map((a) => {
+                const photos = a.photos?.length ? a.photos : (a.avatar ? [a.avatar] : []);
+                const profilePayload = {
+                  id: a.user_id,
+                  display_name: a.display_name,
+                  avatar: a.avatar,
+                  photos,
+                  primary_theriotype: a.primary_theriotype,
+                };
+                return (
+                  <View key={a.user_id} style={styles.attendeeBubble}>
+                    <TouchableOpacity
+                      onPress={() => {
+                        if (photos.length > 0) {
+                          navigation.navigate("GalleryPage", { photos, initialIndex: 0 });
+                        } else {
+                          navigation.navigate("ProfileDetail", { profile: profilePayload });
+                        }
+                      }}
+                    >
+                      <Image source={resolveSource(a.avatar)} style={styles.attendeeAvatar} />
+                    </TouchableOpacity>
+                    <Text style={styles.attendeeName} numberOfLines={1}>{a.display_name}</Text>
+                  </View>
+                );
+              })}
             </ScrollView>
           )}
 

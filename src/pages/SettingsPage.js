@@ -12,6 +12,11 @@ import {
 import { Ionicons } from "@expo/vector-icons";
 import { AuthContext } from "../contexts/AuthContext";
 import { saveData, STORAGE_KEYS } from "../services/storageService";
+import { deleteMyAccount } from "../services/accountDeletionService";
+
+// URL pública donde se hostean los documentos legales (ver carpeta /docs).
+// Cambiar si el sitio se mueve. Hoy apunta a la rama main del repo en GitHub Pages.
+const LEGAL_BASE_URL = "https://juanmanueliglesias-oss.github.io/TherianMatchConnect";
 
 function Section({ title, children }) {
   return (
@@ -62,22 +67,65 @@ export default function SettingsPage({ navigation }) {
   const [darkMode] = useState(true);
   const [discoveryVisible, setDiscoveryVisible] = useState(true);
 
+  const [deleting, setDeleting] = useState(false);
+
   const handleDeleteAccount = () => {
     Alert.alert(
       "¿Eliminar cuenta?",
-      "Esta acción es permanente. Perderás todos tus matches, mensajes y monedas.",
+      "Esta acción es PERMANENTE. Perderás todos tus matches, mensajes, fotos, encuentros y monedas. No se puede recuperar.",
       [
         { text: "Cancelar", style: "cancel" },
         {
-          text: "Eliminar",
+          text: "Eliminar definitivamente",
           style: "destructive",
-          onPress: () => {
-            Alert.alert("Cuenta eliminada", "Tu cuenta ha sido eliminada.");
-            logout();
+          onPress: confirmDeleteAccount,
+        },
+      ]
+    );
+  };
+
+  const confirmDeleteAccount = () => {
+    // Doble confirmación para evitar eliminaciones accidentales
+    Alert.alert(
+      "Última confirmación",
+      "¿Estás 100% seguro? Tus datos se borrarán de forma irreversible en los próximos segundos.",
+      [
+        { text: "No, volver", style: "cancel" },
+        {
+          text: "Sí, borrar todo",
+          style: "destructive",
+          onPress: async () => {
+            setDeleting(true);
+            try {
+              await deleteMyAccount();
+              // logout() limpia el estado del contexto y manda al user al login
+              await logout();
+              Alert.alert(
+                "Cuenta eliminada",
+                "Tu cuenta y todos tus datos fueron eliminados. Si querés volver, podés crear una cuenta nueva con cualquier email."
+              );
+            } catch (e) {
+              Alert.alert(
+                "Error al eliminar",
+                e?.message || "No pudimos eliminar tu cuenta. Escribinos a soportetherianmatch@gmail.com y la borramos manualmente."
+              );
+            } finally {
+              setDeleting(false);
+            }
           },
         },
       ]
     );
+  };
+
+  const openLegal = (slug) => {
+    const url = `${LEGAL_BASE_URL}/${slug}`;
+    Linking.openURL(url).catch(() => {
+      Alert.alert(
+        "No se pudo abrir",
+        `Visitá ${url} en tu navegador para leer el documento.`
+      );
+    });
   };
 
   const handleClearBotData = () => {
@@ -201,9 +249,9 @@ export default function SettingsPage({ navigation }) {
 
       {/* LEGAL */}
       <Section title="Legal">
-        <Row icon="document-text-outline" iconColor="#888" label="Términos de servicio" onPress={() => Alert.alert("Términos", "Consulta los términos en la app.")} />
-        <Row icon="lock-closed-outline" iconColor="#888" label="Política de privacidad" onPress={() => Alert.alert("Privacidad", "Consulta la política de privacidad en la app.")} />
-        <Row icon="people-outline" iconColor="#888" label="Guía de la comunidad" onPress={() => Alert.alert("Comunidad", "Consulta las guías de comunidad.")} last />
+        <Row icon="document-text-outline" iconColor="#888" label="Términos de servicio" onPress={() => openLegal("terminos.html")} />
+        <Row icon="lock-closed-outline" iconColor="#888" label="Política de privacidad" onPress={() => openLegal("privacidad.html")} />
+        <Row icon="people-outline" iconColor="#888" label="Guía de la comunidad" onPress={() => openLegal("comunidad.html")} last />
       </Section>
 
       {/* SOPORTE */}
@@ -242,9 +290,12 @@ export default function SettingsPage({ navigation }) {
 
         <TouchableOpacity
           onPress={handleDeleteAccount}
-          style={{ padding: 14, alignItems: "center" }}
+          disabled={deleting}
+          style={{ padding: 14, alignItems: "center", opacity: deleting ? 0.5 : 1 }}
         >
-          <Text style={{ color: "#ef4444", fontSize: 14 }}>Eliminar cuenta permanentemente</Text>
+          <Text style={{ color: "#ef4444", fontSize: 14 }}>
+            {deleting ? "Eliminando…" : "Eliminar cuenta permanentemente"}
+          </Text>
         </TouchableOpacity>
       </View>
 

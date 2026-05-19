@@ -100,6 +100,9 @@ export default function ChatRoomPage() {
   const name = params.name ?? user?.chatContact?.name ?? "Luna Wolf";
   const photo = params.photo ?? user?.chatContact?.photo ?? AVATARS["loba-1"];
   const photos = params.photos ?? (photo ? [photo] : []);
+  const exclusivePhotos = params.exclusivePhotos ?? [];
+  const otherIsPremium = params.otherIsPremium ?? false;
+  const primaryTheriotype = params.primaryTheriotype ?? "Wolf";
   const contactId = params.contactId ?? "default";
   const targetUserId = params.targetUserId ?? null; // UUID del otro usuario (modo real)
   const isRealChat = !!(targetUserId && user?.supabaseId);
@@ -525,7 +528,17 @@ export default function ChatRoomPage() {
               <Image source={resolveSource(photo)} style={{ width: 40, height: 40, borderRadius: 20, borderWidth: 2, borderColor: "#22c55e" }} />
             </TouchableOpacity>
             <TouchableOpacity
-              onPress={() => navigation.navigate("ProfileDetail", { profile: { display_name: name, avatar: photo, photos, primary_theriotype: "Wolf" } })}
+              onPress={() => navigation.navigate("ProfileDetail", {
+                profile: {
+                  id: targetUserId,
+                  display_name: name,
+                  avatar: photo,
+                  photos,
+                  exclusive_photos: exclusivePhotos,
+                  isPremium: otherIsPremium,
+                  primary_theriotype: primaryTheriotype,
+                },
+              })}
               style={{ flex: 1 }}
             >
               <Text style={{ color: "white", fontWeight: "bold", fontSize: 16 }}>{name}</Text>

@@ -43,13 +43,18 @@ export default function ProfileDetailPage({ route, navigation }) {
   const hasExclusive = profile.exclusive_photos?.length > 0;
 
   useEffect(() => {
-    if (isPremium && hasExclusive) {
-      setLoadingExclusive(true);
-      getExclusivePhotoUrls(profile.exclusive_photos)
-        .then(setExclusiveUrls)
-        .finally(() => setLoadingExclusive(false));
+    if (!isPremium || !hasExclusive) {
+      setExclusiveUrls([]);
+      return;
     }
-  }, []);
+    let cancelled = false;
+    setLoadingExclusive(true);
+    getExclusivePhotoUrls(profile.exclusive_photos)
+      .then((urls) => { if (!cancelled) setExclusiveUrls(urls); })
+      .catch((e) => console.warn("Error firmando fotos exclusivas:", e?.message))
+      .finally(() => { if (!cancelled) setLoadingExclusive(false); });
+    return () => { cancelled = true; };
+  }, [isPremium, hasExclusive, profile.exclusive_photos]);
 
   // Registrar visita al perfil (solo entre usuarios reales)
   useEffect(() => {
@@ -215,6 +220,9 @@ export default function ProfileDetailPage({ route, navigation }) {
                   name: profile.display_name,
                   photo: profile.avatar || profile.photos?.[0],
                   photos: profile.photos || [],
+                  exclusivePhotos: profile.exclusive_photos || [],
+                  otherIsPremium: profile.isPremium,
+                  primaryTheriotype: profile.primary_theriotype,
                   contactId: profile.id,
                   targetUserId: profile.id,
                 })

@@ -84,15 +84,20 @@ export default function SuperMatchInbox({ navigation }) {
     }, [loadAll])
   );
 
-  // Realtime: cuando alguien nos manda un super match, recargar
+  // Realtime: cuando alguien nos manda un super match, recargar.
+  // OJO: NO incluir loadAll en deps — si loadAll cambia se re-suscribe
+  // y supabase tira "cannot add postgres_changes callbacks after subscribe()".
+  // Usamos un ref para llamar siempre a la versión actualizada de loadAll.
+  const loadAllRef = React.useRef(loadAll);
+  loadAllRef.current = loadAll;
   useEffect(() => {
     if (!user?.supabaseId) return;
     const unsubscribe = subscribeToSuperMatches(user.supabaseId, () => {
       playFeedback("superMatch");
-      loadAll();
+      loadAllRef.current?.();
     });
     return unsubscribe;
-  }, [user?.supabaseId, loadAll]);
+  }, [user?.supabaseId]);
 
   const deleteSuperMatch = (id) => {
     Alert.alert("Eliminar Super Match", "¿Quieres eliminar este Super Match?", [

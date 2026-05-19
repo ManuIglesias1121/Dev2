@@ -1,226 +1,221 @@
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
 import {
   View,
   Text,
   StyleSheet,
   TouchableOpacity,
   Modal,
-  Image,
+  TextInput,
   Alert,
+  Platform,
+  KeyboardAvoidingView,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
+import { calculateAge, MIN_AGE } from '../services/legalConsentService';
 
 /**
  * AgeVerificationModal
- * Verifica que el usuario sea mayor de 18 años
- * Métodos: Fecha de nacimiento, Documentación de ID, Verificación facial
+ * Verifica que el usuario sea mayor de 18 años antes de crear cuenta.
+ *
+ * Props:
+ *  - visible: bool
+ *  - onAgeVerified: (birthDateIso: 'YYYY-MM-DD') => void
+ *  - onCancel: () => void
  */
-
 const AgeVerificationModal = ({ visible, onAgeVerified, onCancel }) => {
-  const [step, setStep] = useState('method'); // method → dateInput → success
-  const [birthDate, setBirthDate] = useState(null);
-  const [isLegal, setIsLegal] = useState(false);
+  const [step, setStep] = useState('method'); // method | dateInput | success
+  const [day, setDay] = useState('');
+  const [month, setMonth] = useState('');
+  const [year, setYear] = useState('');
 
-  const calculateAge = (dateString) => {
-    const today = new Date();
-    const birthDateObj = new Date(dateString);
-    let age = today.getFullYear() - birthDateObj.getFullYear();
-    const monthDiff = today.getMonth() - birthDateObj.getMonth();
-    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDateObj.getDate())) {
-      age--;
-    }
-    return age;
+  const dayRef = useRef(null);
+  const monthRef = useRef(null);
+  const yearRef = useRef(null);
+
+  const reset = () => {
+    setStep('method');
+    setDay('');
+    setMonth('');
+    setYear('');
   };
 
-  const handleDateInput = () => {
-    if (!birthDate) {
-      Alert.alert('Error', 'Por favor ingresa tu fecha de nacimiento');
+  const handleManualDate = () => setStep('dateInput');
+
+  const handleVerify = () => {
+    const dNum = parseInt(day, 10);
+    const mNum = parseInt(month, 10);
+    const yNum = parseInt(year, 10);
+
+    if (!dNum || !mNum || !yNum || day.length === 0 || month.length === 0 || year.length !== 4) {
+      Alert.alert('Fecha incompleta', 'Ingresá día, mes y año (4 dígitos).');
+      return;
+    }
+    if (dNum < 1 || dNum > 31 || mNum < 1 || mNum > 12) {
+      Alert.alert('Fecha inválida', 'Revisá día y mes.');
+      return;
+    }
+    if (yNum < 1900 || yNum > new Date().getFullYear()) {
+      Alert.alert('Año inválido', 'Ingresá un año real.');
       return;
     }
 
-    const age = calculateAge(birthDate);
-    if (age < 18) {
+    const iso = `${yNum}-${String(mNum).padStart(2, '0')}-${String(dNum).padStart(2, '0')}`;
+    const parsed = new Date(iso);
+    if (
+      isNaN(parsed.getTime()) ||
+      parsed.getUTCFullYear() !== yNum ||
+      parsed.getUTCMonth() + 1 !== mNum ||
+      parsed.getUTCDate() !== dNum
+    ) {
+      Alert.alert('Fecha inválida', 'Esa fecha no existe (revisá el día).');
+      return;
+    }
+
+    const age = calculateAge(iso);
+    if (age === null || age < MIN_AGE) {
       Alert.alert(
         'Menor de edad',
-        'Debes tener 18 años o más para usar esta app. Lamentamos que no puedas participar ahora.',
-        [{ text: 'OK', onPress: onCancel }]
+        `Tenés que tener al menos ${MIN_AGE} años para usar esta app. Lamentamos que no puedas participar.`,
+        [{ text: 'OK', onPress: () => { onCancel?.(); reset(); } }]
       );
       return;
     }
 
-    setIsLegal(true);
     setStep('success');
     setTimeout(() => {
-      onAgeVerified();
+      onAgeVerified?.(iso);
       reset();
-    }, 2000);
-  };
-
-  const handleManualDate = () => {
-    setStep('dateInput');
-  };
-
-  const reset = () => {
-    setStep('method');
-    setBirthDate(null);
-    setIsLegal(false);
+    }, 1200);
   };
 
   return (
-    <Modal visible={visible} transparent animationType="fade">
-      <View style={styles.overlay}>
+    <Modal visible={visible} transparent animationType="fade" onRequestClose={onCancel}>
+      <KeyboardAvoidingView
+        style={styles.overlay}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      >
         <LinearGradient
           colors={['#1a1a2e', '#16213e']}
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 1 }}
           style={styles.container}
         >
-          {/* PASO 1: SELECCIONAR MÉTODO */}
           {step === 'method' && (
             <View style={styles.content}>
-              <Text style={styles.title}>🔐 Verificación de Edad</Text>
+              <Text style={styles.title}>🔐 Verificación de edad</Text>
               <Text style={styles.subtitle}>
-                Debes confirmar que tienes 18 años o más
+                Debés confirmar que tenés {MIN_AGE} años o más para entrar a la manada.
               </Text>
 
               <View style={styles.methodsContainer}>
-                {/* Método 1: Fecha de Nacimiento */}
-                <TouchableOpacity
-                  style={styles.methodButton}
-                  onPress={handleManualDate}
-                >
+                <TouchableOpacity style={styles.methodButton} onPress={handleManualDate}>
                   <Text style={styles.methodIcon}>📅</Text>
-                  <Text style={styles.methodTitle}>
-                    Fecha de Nacimiento
-                  </Text>
-                  <Text style={styles.methodDesc}>
-                    Ingresa tu fecha directamente
-                  </Text>
+                  <Text style={styles.methodTitle}>Fecha de nacimiento</Text>
+                  <Text style={styles.methodDesc}>Ingresá tu fecha</Text>
                 </TouchableOpacity>
 
-                {/* Método 2: Documento de Identidad */}
-                <TouchableOpacity
-                  style={[styles.methodButton, styles.methodButtonDisabled]}
-                  disabled
-                >
+                <View style={[styles.methodButton, styles.methodButtonDisabled]}>
                   <Text style={styles.methodIcon}>🪪</Text>
-                  <Text style={styles.methodTitle}>
-                    Documentación de ID
-                  </Text>
-                  <Text style={styles.methodDesc}>
-                    (Próximamente disponible)
-                  </Text>
-                </TouchableOpacity>
+                  <Text style={styles.methodTitle}>Documento de identidad</Text>
+                  <Text style={styles.methodDesc}>(Próximamente)</Text>
+                </View>
 
-                {/* Método 3: Verificación Facial */}
-                <TouchableOpacity
-                  style={[styles.methodButton, styles.methodButtonDisabled]}
-                  disabled
-                >
+                <View style={[styles.methodButton, styles.methodButtonDisabled]}>
                   <Text style={styles.methodIcon}>📸</Text>
-                  <Text style={styles.methodTitle}>
-                    Verificación Facial
-                  </Text>
-                  <Text style={styles.methodDesc}>
-                    (Próximamente disponible)
-                  </Text>
-                </TouchableOpacity>
+                  <Text style={styles.methodTitle}>Verificación facial</Text>
+                  <Text style={styles.methodDesc}>(Próximamente)</Text>
+                </View>
               </View>
 
-              <TouchableOpacity
-                style={styles.cancelButton}
-                onPress={onCancel}
-              >
+              <TouchableOpacity style={styles.cancelButton} onPress={onCancel}>
                 <Text style={styles.cancelText}>Cancelar</Text>
               </TouchableOpacity>
 
               <Text style={styles.disclaimer}>
-                Tu privacidad está protegida. Los datos de edad se usan solo para verificación.
+                Tu fecha de nacimiento se usa solo para verificar tu edad. Queda registrada de forma privada.
               </Text>
             </View>
           )}
 
-          {/* PASO 2: INGRESAR FECHA */}
           {step === 'dateInput' && (
             <View style={styles.content}>
-              <Text style={styles.title}>📅 Tu Fecha de Nacimiento</Text>
-              <Text style={styles.subtitle}>
-                Formato: DD/MM/YYYY (ej: 15/03/1995)
-              </Text>
+              <Text style={styles.title}>📅 Tu fecha de nacimiento</Text>
+              <Text style={styles.subtitle}>Formato: DD / MM / AAAA</Text>
 
               <View style={styles.inputContainer}>
-                <Text style={styles.label}>Mes y Año:</Text>
                 <View style={styles.dateInputs}>
-                  <View style={styles.inputField}>
-                    <Text style={styles.placeholder}>DD</Text>
-                  </View>
+                  <TextInput
+                    ref={dayRef}
+                    style={styles.dateField}
+                    placeholder="DD"
+                    placeholderTextColor="#666"
+                    keyboardType="number-pad"
+                    maxLength={2}
+                    value={day}
+                    onChangeText={(t) => {
+                      const clean = t.replace(/\D/g, '');
+                      setDay(clean);
+                      if (clean.length === 2) monthRef.current?.focus();
+                    }}
+                    returnKeyType="next"
+                  />
                   <Text style={styles.separator}>/</Text>
-                  <View style={styles.inputField}>
-                    <Text style={styles.placeholder}>MM</Text>
-                  </View>
+                  <TextInput
+                    ref={monthRef}
+                    style={styles.dateField}
+                    placeholder="MM"
+                    placeholderTextColor="#666"
+                    keyboardType="number-pad"
+                    maxLength={2}
+                    value={month}
+                    onChangeText={(t) => {
+                      const clean = t.replace(/\D/g, '');
+                      setMonth(clean);
+                      if (clean.length === 2) yearRef.current?.focus();
+                    }}
+                    returnKeyType="next"
+                  />
                   <Text style={styles.separator}>/</Text>
-                  <View style={styles.inputField}>
-                    <Text style={styles.placeholder}>YYYY</Text>
-                  </View>
+                  <TextInput
+                    ref={yearRef}
+                    style={[styles.dateField, styles.yearField]}
+                    placeholder="AAAA"
+                    placeholderTextColor="#666"
+                    keyboardType="number-pad"
+                    maxLength={4}
+                    value={year}
+                    onChangeText={(t) => setYear(t.replace(/\D/g, ''))}
+                    returnKeyType="done"
+                    onSubmitEditing={handleVerify}
+                  />
                 </View>
               </View>
 
-              {/* Picker simulado: Mostrar ejemplo */}
               <View style={styles.exampleContainer}>
-                <Text style={styles.exampleLabel}>Ejemplo válido:</Text>
-                <Text style={styles.exampleText}>25/06/1995 ✅ (28 años)</Text>
-                <Text style={styles.exampleText}>10/12/2010 ❌ (13 años)</Text>
+                <Text style={styles.exampleLabel}>Ejemplos</Text>
+                <Text style={styles.exampleText}>✅ 25/06/1995</Text>
+                <Text style={styles.exampleText}>❌ 10/12/2010 (menor de {MIN_AGE})</Text>
               </View>
 
-              <TouchableOpacity
-                style={styles.primaryButton}
-                onPress={handleDateInput}
-              >
-                <Text style={styles.buttonText}>Verificar Edad</Text>
+              <TouchableOpacity style={styles.primaryButton} onPress={handleVerify}>
+                <Text style={styles.buttonText}>Verificar edad</Text>
               </TouchableOpacity>
 
-              <TouchableOpacity
-                style={styles.secondaryButton}
-                onPress={() => setStep('method')}
-              >
+              <TouchableOpacity style={styles.secondaryButton} onPress={() => setStep('method')}>
                 <Text style={styles.secondaryButtonText}>Atrás</Text>
               </TouchableOpacity>
             </View>
           )}
 
-          {/* PASO 3: ÉXITO */}
           {step === 'success' && (
             <View style={styles.content}>
               <Text style={styles.successIcon}>✅</Text>
-              <Text style={styles.successTitle}>
-                ¡Verificación Completada!
-              </Text>
-              <Text style={styles.successSubtitle}>
-                Bienvenido a la comunidad therianthrope
-              </Text>
-
-              <View style={styles.checklistContainer}>
-                <View style={styles.checkItem}>
-                  <Text style={styles.checkIcon}>✓</Text>
-                  <Text style={styles.checkText}>Edad verificada</Text>
-                </View>
-                <View style={styles.checkItem}>
-                  <Text style={styles.checkIcon}>✓</Text>
-                  <Text style={styles.checkText}>Términos aceptados</Text>
-                </View>
-                <View style={styles.checkItem}>
-                  <Text style={styles.checkIcon}>✓</Text>
-                  <Text style={styles.checkText}>Privacidad protegida</Text>
-                </View>
-              </View>
-
-              <Text style={styles.successMessage}>
-                Entrando a la app...
-              </Text>
+              <Text style={styles.successTitle}>Edad verificada</Text>
+              <Text style={styles.successSubtitle}>Continuamos con el registro…</Text>
             </View>
           )}
         </LinearGradient>
-      </View>
+      </KeyboardAvoidingView>
     </Modal>
   );
 };
@@ -244,7 +239,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   title: {
-    fontSize: 28,
+    fontSize: 26,
     fontWeight: 'bold',
     color: '#fff',
     marginBottom: 10,
@@ -253,107 +248,61 @@ const styles = StyleSheet.create({
   subtitle: {
     fontSize: 14,
     color: '#b0b0b0',
-    marginBottom: 30,
+    marginBottom: 24,
     textAlign: 'center',
     lineHeight: 20,
   },
 
-  // MÉTODOS
-  methodsContainer: {
-    width: '100%',
-    marginBottom: 20,
-  },
+  methodsContainer: { width: '100%', marginBottom: 16 },
   methodButton: {
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    backgroundColor: 'rgba(255, 255, 255, 0.08)',
     borderRadius: 12,
-    padding: 20,
+    padding: 18,
     marginBottom: 12,
     borderWidth: 1,
     borderColor: '#ff6b9d',
     alignItems: 'center',
   },
-  methodButtonDisabled: {
-    opacity: 0.5,
-    borderColor: '#666',
-  },
-  methodIcon: {
-    fontSize: 40,
-    marginBottom: 10,
-  },
-  methodTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#fff',
-    marginBottom: 5,
-  },
-  methodDesc: {
-    fontSize: 12,
-    color: '#999',
-  },
+  methodButtonDisabled: { opacity: 0.5, borderColor: '#666' },
+  methodIcon: { fontSize: 32, marginBottom: 8 },
+  methodTitle: { fontSize: 15, fontWeight: '600', color: '#fff', marginBottom: 4 },
+  methodDesc: { fontSize: 12, color: '#999' },
 
-  // INPUT
   inputContainer: {
     width: '100%',
-    marginBottom: 30,
+    marginBottom: 18,
     backgroundColor: 'rgba(255, 255, 255, 0.05)',
     borderRadius: 12,
-    padding: 20,
+    padding: 16,
   },
-  label: {
-    color: '#fff',
-    fontSize: 14,
-    fontWeight: '600',
-    marginBottom: 15,
-  },
-  dateInputs: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  inputField: {
-    width: 50,
-    height: 50,
+  dateInputs: { flexDirection: 'row', justifyContent: 'center', alignItems: 'center' },
+  dateField: {
+    width: 56,
+    height: 52,
     backgroundColor: 'rgba(255, 255, 255, 0.1)',
     borderRadius: 8,
     borderWidth: 2,
     borderColor: '#ff6b9d',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  placeholder: {
-    color: '#666',
-    fontSize: 12,
-    fontWeight: 'bold',
-  },
-  separator: {
     color: '#fff',
-    fontSize: 20,
-    marginHorizontal: 5,
+    fontSize: 18,
+    fontWeight: '600',
+    textAlign: 'center',
   },
+  yearField: { width: 86 },
+  separator: { color: '#fff', fontSize: 22, marginHorizontal: 6 },
 
-  // EJEMPLO
   exampleContainer: {
     width: '100%',
     backgroundColor: 'rgba(76, 175, 80, 0.1)',
     borderLeftWidth: 4,
     borderLeftColor: '#4CAF50',
     borderRadius: 8,
-    padding: 15,
-    marginBottom: 30,
+    padding: 12,
+    marginBottom: 22,
   },
-  exampleLabel: {
-    color: '#4CAF50',
-    fontSize: 12,
-    fontWeight: '600',
-    marginBottom: 8,
-  },
-  exampleText: {
-    color: '#fff',
-    fontSize: 13,
-    marginBottom: 5,
-  },
+  exampleLabel: { color: '#4CAF50', fontSize: 12, fontWeight: '600', marginBottom: 6 },
+  exampleText: { color: '#fff', fontSize: 13, marginBottom: 3 },
 
-  // BOTONES
   primaryButton: {
     width: '100%',
     backgroundColor: '#ff6b9d',
@@ -362,11 +311,7 @@ const styles = StyleSheet.create({
     marginBottom: 12,
     alignItems: 'center',
   },
-  buttonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '600',
-  },
+  buttonText: { color: '#fff', fontSize: 16, fontWeight: '600' },
   secondaryButton: {
     width: '100%',
     backgroundColor: 'transparent',
@@ -375,72 +320,19 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     borderRadius: 10,
   },
-  secondaryButtonText: {
-    color: '#999',
-    fontSize: 16,
-    fontWeight: '600',
-    textAlign: 'center',
-  },
-  cancelButton: {
-    width: '100%',
-    paddingVertical: 12,
-    marginBottom: 20,
-  },
-  cancelText: {
-    color: '#999',
-    fontSize: 16,
-    fontWeight: '600',
-    textAlign: 'center',
-  },
+  secondaryButtonText: { color: '#999', fontSize: 16, fontWeight: '600', textAlign: 'center' },
+  cancelButton: { width: '100%', paddingVertical: 12, marginBottom: 12 },
+  cancelText: { color: '#999', fontSize: 16, fontWeight: '600', textAlign: 'center' },
 
-  // SUCCESS
-  successIcon: {
-    fontSize: 60,
-    marginBottom: 15,
-  },
-  successTitle: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#4CAF50',
-    marginBottom: 8,
-    textAlign: 'center',
-  },
-  successSubtitle: {
-    fontSize: 14,
-    color: '#b0b0b0',
-    marginBottom: 30,
-    textAlign: 'center',
-  },
-  checklistContainer: {
-    width: '100%',
-    marginBottom: 20,
-  },
-  checkItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 12,
-  },
-  checkIcon: {
-    fontSize: 18,
-    color: '#4CAF50',
-    marginRight: 12,
-    fontWeight: 'bold',
-  },
-  checkText: {
-    color: '#fff',
-    fontSize: 14,
-  },
-  successMessage: {
-    color: '#999',
-    fontSize: 13,
-    fontStyle: 'italic',
-  },
+  successIcon: { fontSize: 60, marginBottom: 15 },
+  successTitle: { fontSize: 22, fontWeight: 'bold', color: '#4CAF50', marginBottom: 6 },
+  successSubtitle: { fontSize: 14, color: '#b0b0b0' },
 
   disclaimer: {
     fontSize: 11,
     color: '#666',
     textAlign: 'center',
-    marginTop: 10,
+    marginTop: 6,
     fontStyle: 'italic',
   },
 });

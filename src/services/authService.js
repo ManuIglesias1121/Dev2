@@ -1,11 +1,16 @@
 import { supabase } from "./supabase";
 
-export async function signUp(email, password, displayName) {
+export async function signUp(email, password, displayName, birthDateIso = null) {
   const { data, error } = await supabase.auth.signUp({
     email,
     password,
     options: {
-      data: { display_name: displayName },
+      data: {
+        display_name: displayName,
+        // birth_date queda en user_metadata como respaldo para el trigger
+        // handle_new_user (si lo lee). El upsert post-signup lo asegura igual.
+        birth_date: birthDateIso,
+      },
     },
   });
   if (error) throw error;

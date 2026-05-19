@@ -1,3 +1,9 @@
+---
+layout: default
+title: Política de privacidad
+permalink: /privacidad.html
+---
+
 # POLÍTICA DE PRIVACIDAD Y PROTECCIÓN DE DATOS
 
 **Última actualización: Mayo 19, 2026**

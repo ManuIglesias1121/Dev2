@@ -1,3 +1,9 @@
+---
+layout: default
+title: Términos y condiciones
+permalink: /terminos.html
+---
+
 # TÉRMINOS Y CONDICIONES DE SERVICIO
 
 **Última actualización: Mayo 3, 2026**

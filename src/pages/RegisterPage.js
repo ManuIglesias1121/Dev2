@@ -5,6 +5,7 @@ import {
   Alert,
   Animated,
   KeyboardAvoidingView,
+  Linking,
   Platform,
   ScrollView,
   StyleSheet,
@@ -15,6 +16,22 @@ import {
 } from "react-native";
 import { signUp } from "../services/authService";
 import { useAuth } from "../contexts/AuthContext";
+import AgeVerificationModal from "../components/AgeVerificationModal";
+import ConsentScreens from "../components/ConsentScreens";
+import {
+  recordAgeVerification,
+  recordConsents,
+  savePendingLegal,
+} from "../services/legalConsentService";
+import { supabase } from "../services/supabase";
+
+// Estados del flujo de registro
+const STEP = {
+  FORM: "form",
+  AGE: "age",
+  CONSENTS: "consents",
+  CREATING: "creating",
+};
 
 export default function RegisterPage({ navigation }) {
   const { setSessionUser } = useAuth();
@@ -24,26 +41,84 @@ export default function RegisterPage({ navigation }) {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
 
+  const [step, setStep] = useState(STEP.FORM);
+  const [birthDateIso, setBirthDateIso] = useState(null);
+
   const fadeAnim = useRef(new Animated.Value(0)).current;
   useEffect(() => {
     Animated.timing(fadeAnim, { toValue: 1, duration: 700, useNativeDriver: true }).start();
   }, []);
 
-  const handleRegister = async () => {
+  // Paso 1: validar form y abrir verificación de edad
+  const handleSubmitForm = () => {
     if (!name.trim()) return Alert.alert("Falta el nombre", "Ingresa tu nombre.");
     if (!email.trim()) return Alert.alert("Falta el email", "Ingresa tu email.");
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email.trim()))
+      return Alert.alert("Email inválido", "Ingresa un email válido (ej: nombre@dominio.com).");
     if (password.length < 6) return Alert.alert("Contraseña corta", "Mínimo 6 caracteres.");
 
+    setStep(STEP.AGE);
+  };
+
+  // Paso 2: edad verificada
+  const handleAgeVerified = (iso) => {
+    setBirthDateIso(iso);
+    setStep(STEP.CONSENTS);
+  };
+
+  // Paso 3: consentimientos aceptados → crear cuenta
+  const handleConsentsComplete = async (consents) => {
+    setStep(STEP.CREATING);
     setLoading(true);
     try {
-      const { user } = await signUp(email.trim().toLowerCase(), password, name.trim());
-      if (user) await setSessionUser(user);
-      else Alert.alert("¡Cuenta creada!", "Revisa tu email para confirmar tu cuenta y luego inicia sesión.");
+      const { user } = await signUp(
+        email.trim().toLowerCase(),
+        password,
+        name.trim(),
+        birthDateIso
+      );
+
+      // Hay dos caminos: con sesión inmediata (autoconfirm on) o con email pendiente.
+      const { data: { session } } = await supabase.auth.getSession();
+
+      if (user && session) {
+        // Sesión activa → registrar consents + edad inmediatamente
+        try {
+          await recordAgeVerification(user.id, birthDateIso, "self_declared");
+          await recordConsents(user.id, consents, "signup");
+        } catch (e) {
+          // Si falla por RLS o cualquier otra cosa, dejarlos pendientes para reintento
+          console.warn("Consents inline falló, encolando pendiente:", e?.message || e);
+          await savePendingLegal(birthDateIso, consents);
+        }
+        await setSessionUser(user);
+      } else {
+        // Confirm-by-email: no hay sesión, dejar todo pendiente para el primer login
+        await savePendingLegal(birthDateIso, consents);
+        Alert.alert(
+          "¡Cuenta creada!",
+          "Te enviamos un email para confirmar tu cuenta. Tus datos legales se aplicarán al iniciar sesión.",
+          [{ text: "OK", onPress: () => setStep(STEP.FORM) }]
+        );
+      }
     } catch (e) {
       Alert.alert("Error", e.message || "No pudimos crear la cuenta.");
+      setStep(STEP.FORM);
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleCancelLegal = () => {
+    Alert.alert(
+      "Cancelar registro",
+      "Sin verificar tu edad y aceptar los términos no podés crear cuenta. ¿Volver al formulario?",
+      [
+        { text: "Seguir", style: "cancel" },
+        { text: "Volver", style: "destructive", onPress: () => setStep(STEP.FORM) },
+      ]
+    );
   };
 
   return (
@@ -67,6 +142,7 @@ export default function RegisterPage({ navigation }) {
                 value={name}
                 onChangeText={setName}
                 autoCapitalize="words"
+                editable={!loading}
               />
             </View>
 
@@ -82,6 +158,7 @@ export default function RegisterPage({ navigation }) {
                 keyboardType="email-address"
                 autoCapitalize="none"
                 autoCorrect={false}
+                editable={!loading}
               />
             </View>
 
@@ -96,17 +173,22 @@ export default function RegisterPage({ navigation }) {
                 onChangeText={setPassword}
                 secureTextEntry={!showPassword}
                 autoCapitalize="none"
+                editable={!loading}
               />
               <TouchableOpacity onPress={() => setShowPassword(!showPassword)} style={{ padding: 8 }}>
                 <Ionicons name={showPassword ? "eye-off-outline" : "eye-outline"} size={20} color="#555" />
               </TouchableOpacity>
             </View>
 
-            <TouchableOpacity onPress={handleRegister} disabled={loading} style={[styles.btn, loading && { opacity: 0.6 }]}>
+            <TouchableOpacity onPress={handleSubmitForm} disabled={loading} style={[styles.btn, loading && { opacity: 0.6 }]}>
               <LinearGradient colors={["#16a34a", "#22c55e"]} style={styles.btnGradient}>
-                <Text style={styles.btnText}>{loading ? "Creando cuenta..." : "Registrarme"}</Text>
+                <Text style={styles.btnText}>{loading ? "Creando cuenta..." : "Continuar"}</Text>
               </LinearGradient>
             </TouchableOpacity>
+
+            <Text style={styles.legalFootnote}>
+              Al continuar verificarás tu edad y aceptarás los Términos, Política de Privacidad y Guías de Comunidad.
+            </Text>
 
             <TouchableOpacity onPress={() => navigation.navigate("Login")} style={{ marginTop: 16, alignItems: "center" }}>
               <Text style={{ color: "#22c55e", fontSize: 15 }}>¿Ya tienes cuenta? Inicia sesión</Text>
@@ -115,6 +197,23 @@ export default function RegisterPage({ navigation }) {
 
         </Animated.View>
       </ScrollView>
+
+      {/* PASO 2: Verificación de edad */}
+      <AgeVerificationModal
+        visible={step === STEP.AGE}
+        onAgeVerified={handleAgeVerified}
+        onCancel={handleCancelLegal}
+      />
+
+      {/* PASO 3: Consentimientos legales */}
+      {step === STEP.CONSENTS && (
+        <View style={StyleSheet.absoluteFill}>
+          <ConsentScreens
+            onConsentComplete={handleConsentsComplete}
+            onCancel={handleCancelLegal}
+          />
+        </View>
+      )}
     </KeyboardAvoidingView>
   );
 }
@@ -139,4 +238,11 @@ const styles = StyleSheet.create({
   btn: { borderRadius: 16, overflow: "hidden", marginTop: 8 },
   btnGradient: { paddingVertical: 16, alignItems: "center" },
   btnText: { color: "white", fontSize: 18, fontWeight: "bold" },
+  legalFootnote: {
+    color: "#666",
+    fontSize: 11,
+    marginTop: 12,
+    textAlign: "center",
+    lineHeight: 16,
+  },
 });

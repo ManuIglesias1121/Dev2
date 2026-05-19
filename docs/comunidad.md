@@ -1,3 +1,9 @@
+---
+layout: default
+title: Guías de la comunidad
+permalink: /comunidad.html
+---
+
 # COMMUNITY GUIDELINES (GUÍAS DE COMUNIDAD)
 
 **Última actualización: Abril 5, 2026**

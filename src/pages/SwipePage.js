@@ -15,9 +15,11 @@ import { LinearGradient } from "expo-linear-gradient";
 import { useNavigation, useFocusEffect } from "@react-navigation/native";
 import SwipeCard from "../components/SwipeCard";
 import BannerAdComponent from "../components/BannerAdComponent";
+import MatchModal from "../components/MatchModal";
 import { getTherianProfiles } from "../services/profilesService";
 import { showInterstitialAd } from "../services/adService";
 import { sendSuperMatch } from "../services/superMatchService";
+import { sendLike } from "../services/matchService";
 import { useAuth } from "../contexts/AuthContext";
 import { saveData, loadData, STORAGE_KEYS } from "../services/storageService";
 
@@ -43,6 +45,7 @@ export default function SwipePage() {
   const [filters, setFilters] = useState(DEFAULT_FILTERS);
   const [pendingFilters, setPendingFilters] = useState(DEFAULT_FILTERS);
   const [noMoreVisible, setNoMoreVisible] = useState(false);
+  const [matchModal, setMatchModal] = useState(null);
   const navigation = useNavigation();
   const { user, swipeProfile } = useAuth();
   const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -105,6 +108,56 @@ export default function SwipePage() {
         showInterstitialAd();
       }
     }
+  };
+
+  const handleLike = async () => {
+    const target = current;
+    if (!target) return handleSwipe();
+
+    const isRealUser = target.id && typeof target.id === "string" && target.id.length > 30;
+
+    if (isRealUser && user?.supabaseId) {
+      try {
+        const result = await sendLike({ likerId: user.supabaseId, likedId: target.id });
+        if (result?.isMatch) {
+          setMatchModal({
+            other: target,
+            myAvatar: user.avatar || user.avatar_url,
+          });
+          return; // No avanzar el swipe hasta que el usuario cierre el modal
+        }
+      } catch (e) {
+        console.warn("Error enviando like:", e?.message);
+      }
+    }
+
+    handleSwipe();
+  };
+
+  const closeMatchModal = () => {
+    setMatchModal(null);
+    handleSwipe();
+  };
+
+  const openMatchChat = () => {
+    const other = matchModal?.other;
+    setMatchModal(null);
+    if (!other) {
+      handleSwipe();
+      return;
+    }
+    navigation.navigate("ChatRoomPage", {
+      name: other.display_name || other.name,
+      photo: other.avatar || other.photos?.[0],
+      photos: other.photos || (other.avatar ? [other.avatar] : []),
+      exclusivePhotos: other.exclusive_photos || [],
+      otherIsPremium: other.isPremium,
+      primaryTheriotype: other.primary_theriotype,
+      contactId: other.id,
+      targetUserId: other.id,
+    });
+    // Avanzar el swipe en segundo plano para que al volver no veas el mismo perfil
+    handleSwipe();
   };
 
   const handleSuperLike = async () => {
@@ -196,7 +249,7 @@ export default function SwipePage() {
           <SwipeCard
             profile={current}
             onNope={handleSwipe}
-            onLike={handleSwipe}
+            onLike={handleLike}
             onSuper={handleSuperLike}
             onOpenGallery={() => navigation.navigate("GalleryPage", { photos: current.photos })}
             onOpenProfile={() => navigation.navigate("ProfileDetail", { profile: current })}
@@ -238,6 +291,16 @@ export default function SwipePage() {
 
       {/* BANNER PUBLICITARIO — solo usuarios free */}
       {!isPremium && <BannerAdComponent style={styles.banner} />}
+
+      {/* MODAL DE MATCH */}
+      <MatchModal
+        visible={!!matchModal}
+        myAvatar={matchModal?.myAvatar}
+        otherAvatar={matchModal?.other?.avatar || matchModal?.other?.photos?.[0]}
+        otherName={matchModal?.other?.display_name || matchModal?.other?.name}
+        onSendMessage={openMatchChat}
+        onKeepSwiping={closeMatchModal}
+      />
 
       {/* MODAL FILTROS */}
       <Modal visible={showFilters} transparent animationType="slide">

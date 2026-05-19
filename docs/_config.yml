@@ -1,0 +1,10 @@
+title: TherianMatchConnect — Documentos legales
+description: Términos de servicio, Política de privacidad y Guías de comunidad
+theme: jekyll-theme-cayman
+lang: es
+
+# Excluidos del sitio público
+exclude:
+  - README.md
+  - Gemfile
+  - Gemfile.lock

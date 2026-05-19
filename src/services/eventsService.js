@@ -160,11 +160,13 @@ export async function fetchEventDetail(eventId) {
     },
     attendees: (attendees || []).map((a) => {
       const p = attendeeProfiles?.find((pr) => pr.id === a.user_id);
+      const photos = p?.photos?.length ? p.photos : (p?.avatar_url ? [p.avatar_url] : []);
       return {
         user_id: a.user_id,
         status: a.status,
         display_name: p?.display_name || "Therian",
         avatar: p?.avatar_url || p?.photos?.[0] || null,
+        photos,
         primary_theriotype: p?.primary_theriotype,
       };
     }),
@@ -251,10 +253,54 @@ export async function fetchEventsImAttending(userId) {
   }));
 }
 
-// Suscripción Realtime a un evento (cuando llegan/se van asistentes)
+// Cuenta encuentros y RSVPs nuevos desde la última vez que el usuario abrió la lista.
+// Incluye:
+//  - encuentros activos futuros creados después de lastSeen (excluyendo los del propio usuario)
+//  - nuevos asistentes (no soy yo) a eventos donde soy host o estoy anotado
+export async function fetchEventsBadgeCount({ userId, lastSeenIso }) {
+  if (!userId) return 0;
+  const sinceIso = lastSeenIso || new Date(0).toISOString();
+  const nowIso = new Date().toISOString();
+
+  // 1) Encuentros nuevos activos futuros creados después de lastSeen, no propios
+  const { count: newEventsCount } = await supabase
+    .from("events")
+    .select("id", { count: "exact", head: true })
+    .eq("status", "active")
+    .gte("starts_at", nowIso)
+    .gt("created_at", sinceIso)
+    .neq("host_id", userId);
+
+  // 2) Eventos donde soy host O estoy anotado
+  const [{ data: myHosted }, { data: myAttending }] = await Promise.all([
+    supabase.from("events").select("id").eq("host_id", userId),
+    supabase.from("event_attendees").select("event_id").eq("user_id", userId),
+  ]);
+  const relatedIds = new Set([
+    ...(myHosted || []).map((e) => e.id),
+    ...(myAttending || []).map((a) => a.event_id),
+  ]);
+
+  let newRsvpsCount = 0;
+  if (relatedIds.size > 0) {
+    const { count } = await supabase
+      .from("event_attendees")
+      .select("id", { count: "exact", head: true })
+      .in("event_id", Array.from(relatedIds))
+      .neq("user_id", userId)
+      .gt("created_at", sinceIso);
+    newRsvpsCount = count || 0;
+  }
+
+  return (newEventsCount || 0) + newRsvpsCount;
+}
+
+// Suscripción Realtime a un evento (cuando llegan/se van asistentes).
+// Nombre de canal único para evitar colisión al re-montar el componente.
 export function subscribeToEvent(eventId, onChange) {
+  const channelName = `event:${eventId}:${Date.now()}:${Math.random().toString(36).slice(2, 8)}`;
   const channel = supabase
-    .channel(`event:${eventId}`)
+    .channel(channelName)
     .on(
       "postgres_changes",
       { event: "*", schema: "public", table: "event_attendees", filter: `event_id=eq.${eventId}` },

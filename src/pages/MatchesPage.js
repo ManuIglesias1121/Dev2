@@ -22,6 +22,7 @@ import { useAuth } from "../contexts/AuthContext";
 import { fakeMatches } from "../data/fakeMatches";
 import { loadData, saveData } from "../services/storageService";
 import { fetchReceivedSuperMatches, subscribeToSuperMatches } from "../services/superMatchService";
+import { fetchMatches, subscribeToMatches } from "../services/matchService";
 
 const DELETED_MATCHES_KEY = "deleted_matches";
 
@@ -45,37 +46,65 @@ export default function MatchesPage() {
     const deleted = await loadData(DELETED_MATCHES_KEY, []);
     setDeletedIds(deleted);
 
-    // Traer super matches reales recibidos y mostrarlos como matches
-    let realMatches = [];
+    let realSupers = [];
+    let realMutual = [];
+
     if (user?.supabaseId) {
       try {
         const supers = await fetchReceivedSuperMatches(user.supabaseId);
-        // Contar no leídos para el badge
         setUnreadSuperCount(supers.filter((sm) => !sm.is_read).length);
-        realMatches = supers.map((sm) => ({
-          id: sm.id,
+        realSupers = supers.map((sm) => ({
+          id: `super_${sm.id}`,
           display_name: sm.sender.display_name,
           avatar: sm.sender.avatar,
           photos: sm.sender.photos || [],
+          exclusive_photos: sm.sender.exclusive_photos || [],
           primary_theriotype: sm.sender.primary_theriotype,
           age: null,
           city: null,
           biography: null,
           distance: null,
-          isPremium: false,
+          isPremium: sm.sender.isPremium || false,
           isOnline: false,
           unreadCount: sm.is_read ? 0 : 1,
           lastMessage: "Te mandó un Super Match ✨",
           matchedAt: sm.created_at,
-          targetUserId: sm.sender.id, // para iniciar chat real
+          targetUserId: sm.sender.id,
         }));
       } catch (e) {
-        console.warn("Error cargando super matches como matches:", e?.message);
+        console.warn("Error cargando super matches:", e?.message);
+      }
+
+      try {
+        const mutual = await fetchMatches(user.supabaseId);
+        realMutual = mutual.map((m) => ({
+          id: `match_${m.id}`,
+          display_name: m.other.display_name,
+          avatar: m.other.avatar,
+          photos: m.other.photos,
+          exclusive_photos: m.other.exclusive_photos || [],
+          primary_theriotype: m.other.primary_theriotype,
+          age: m.other.age,
+          city: m.other.city,
+          biography: null,
+          distance: null,
+          isPremium: m.other.isPremium || false,
+          isOnline: false,
+          unreadCount: 0,
+          lastMessage: "¡Hicieron match! 💚 Mandá el primer mensaje",
+          matchedAt: m.created_at,
+          targetUserId: m.other.id,
+        }));
+      } catch (e) {
+        console.warn("Error cargando matches mutuos:", e?.message);
       }
     }
 
-    // Combinar reales primero + fakes
-    setMatches([...realMatches, ...fakeMatches]);
+    // Dedup: si una persona está en mutual y en super, priorizar mutual
+    const mutualUserIds = new Set(realMutual.map((m) => m.targetUserId));
+    const supersFiltered = realSupers.filter((s) => !mutualUserIds.has(s.targetUserId));
+
+    setMatches([...realMutual, ...supersFiltered, ...fakeMatches]);
   }, [user?.supabaseId]);
 
   useFocusEffect(
@@ -84,11 +113,15 @@ export default function MatchesPage() {
     }, [loadMatches])
   );
 
-  // Realtime: si llega un super match nuevo, actualizar
+  // Realtime: si llega un super match o match nuevo, actualizar
   useEffect(() => {
     if (!user?.supabaseId) return;
-    const unsubscribe = subscribeToSuperMatches(user.supabaseId, () => loadMatches());
-    return unsubscribe;
+    const unsubSupers = subscribeToSuperMatches(user.supabaseId, () => loadMatches());
+    const unsubMatches = subscribeToMatches(user.supabaseId, () => loadMatches());
+    return () => {
+      unsubSupers();
+      unsubMatches();
+    };
   }, [user?.supabaseId, loadMatches]);
 
   const handleDelete = (match) => {
@@ -128,6 +161,9 @@ export default function MatchesPage() {
       name: match.display_name,
       photo: match.avatar,
       photos: match.photos || (match.avatar ? [match.avatar] : []),
+      exclusivePhotos: match.exclusive_photos || [],
+      otherIsPremium: match.isPremium,
+      primaryTheriotype: match.primary_theriotype,
       contactId: isRealUser ? match.targetUserId : `match_${match.id}`,
       targetUserId: isRealUser ? match.targetUserId : null,
       isPremium: match.isPremium,
@@ -137,9 +173,11 @@ export default function MatchesPage() {
   const goToProfile = (match) => {
     navigation.navigate("ProfileDetail", {
       profile: {
+        id: match.targetUserId,
         display_name: match.display_name,
         avatar: match.avatar,
-        photos: [match.avatar],
+        photos: match.photos?.length ? match.photos : (match.avatar ? [match.avatar] : []),
+        exclusive_photos: match.exclusive_photos || [],
         primary_theriotype: match.primary_theriotype,
         species_family: match.species_family,
         age: match.age,

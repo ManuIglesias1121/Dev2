@@ -45,7 +45,11 @@ const ConsentScreens = ({ onConsentComplete, onCancel }) => {
     if (currentScreen < screens.length - 1) {
       setCurrentScreen(currentScreen + 1);
     } else {
-      // Completado
+      // Doble check al final: si el usuario destildó un obligatorio retrocediendo, abortar
+      if (!canProceed()) {
+        setCurrentScreen(0);
+        return;
+      }
       onConsentComplete(consents);
     }
   };
@@ -60,6 +64,7 @@ const ConsentScreens = ({ onConsentComplete, onCancel }) => {
     {
       title: '⚖️ Términos y Condiciones',
       requiredKey: 'terms',
+      required: true,
       content: (
         <ScrollView style={styles.scrollContent}>
           <Text style={styles.sectionTitle}>Acuerdo Legal</Text>
@@ -98,6 +103,7 @@ const ConsentScreens = ({ onConsentComplete, onCancel }) => {
     {
       title: '🔐 Política de Privacidad',
       requiredKey: 'privacy',
+      required: true,
       content: (
         <ScrollView style={styles.scrollContent}>
           <Text style={styles.sectionTitle}>Tu Privacidad es Sagrada</Text>
@@ -150,6 +156,7 @@ const ConsentScreens = ({ onConsentComplete, onCancel }) => {
     {
       title: '👥 Guías de Comunidad',
       requiredKey: 'community',
+      required: true,
       content: (
         <ScrollView style={styles.scrollContent}>
           <Text style={styles.sectionTitle}>Comunidad Segura y Respetuosa</Text>
@@ -360,10 +367,10 @@ const ConsentScreens = ({ onConsentComplete, onCancel }) => {
           <TouchableOpacity
             style={[
               styles.nextButton,
-              !consents[screen.requiredKey] && styles.nextButtonDisabled,
+              screen.required && !consents[screen.requiredKey] && styles.nextButtonDisabled,
             ]}
             onPress={handleNext}
-            disabled={!consents[screen.requiredKey]}
+            disabled={screen.required && !consents[screen.requiredKey]}
           >
             <Text style={styles.buttonText}>
               {currentScreen === screens.length - 1 ? '¡Empezar!' : 'Siguiente →'}

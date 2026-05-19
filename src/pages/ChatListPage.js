@@ -131,6 +131,12 @@ export default function ChatListPage() {
               navigation.navigate("ChatRoomPage", {
                 name: conv.otherDisplayName,
                 photo: conv.otherAvatar,
+                photos: conv.otherPhotos?.length
+                  ? conv.otherPhotos
+                  : (conv.otherAvatar ? [conv.otherAvatar] : []),
+                exclusivePhotos: conv.otherExclusivePhotos || [],
+                otherIsPremium: conv.otherIsPremium,
+                primaryTheriotype: conv.otherTheriotype,
                 contactId: conv.id,
                 targetUserId: conv.otherUserId,
               })

@@ -15,6 +15,10 @@ import { useAuth } from '../contexts/AuthContext';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { supabase } from '../services/supabase';
 import { fakeProfiles } from '../data/fakeProfiles';
+import { fetchEventsBadgeCount } from '../services/eventsService';
+import { loadData, saveData } from '../services/storageService';
+
+const EVENTS_LAST_SEEN_KEY = (uid) => `events_last_seen_${uid || 'anon'}`;
 
 function resolveSource(img) {
   if (!img) return require('../../assets/logo1.png');
@@ -28,12 +32,39 @@ export default function LocalizationPage() {
   const [loading, setLoading] = useState(true);
   const [selectedCity, setSelectedCity] = useState(null);
   const [isTraveling, setIsTraveling] = useState(false);
+  const [eventsBadge, setEventsBadge] = useState(0);
 
   useFocusEffect(
     useCallback(() => {
       loadUsers();
-    }, [])
+      loadEventsBadge();
+    }, [user?.supabaseId])
   );
+
+  async function loadEventsBadge() {
+    if (!user?.supabaseId) {
+      setEventsBadge(0);
+      return;
+    }
+    try {
+      const lastSeenIso = await loadData(EVENTS_LAST_SEEN_KEY(user.supabaseId), null);
+      const count = await fetchEventsBadgeCount({
+        userId: user.supabaseId,
+        lastSeenIso,
+      });
+      setEventsBadge(count);
+    } catch {
+      setEventsBadge(0);
+    }
+  }
+
+  async function openEvents() {
+    if (user?.supabaseId) {
+      await saveData(EVENTS_LAST_SEEN_KEY(user.supabaseId), new Date().toISOString());
+    }
+    setEventsBadge(0);
+    navigation.navigate('Events');
+  }
 
   async function loadUsers() {
     setLoading(true);
@@ -203,12 +234,28 @@ export default function LocalizationPage() {
         {/* ACCESO A ENCUENTROS */}
         <TouchableOpacity
           style={[styles.travelBtn, { borderColor: '#22c55e', backgroundColor: 'rgba(34,197,94,0.08)', marginTop: 12 }]}
-          onPress={() => navigation.navigate('Events')}
+          onPress={openEvents}
         >
-          <Text style={{ fontSize: 22 }}>🐺</Text>
+          <View>
+            <Text style={{ fontSize: 22 }}>🐺</Text>
+            {eventsBadge > 0 && (
+              <View style={styles.eventsBadge}>
+                <Text style={styles.eventsBadgeText}>
+                  {eventsBadge > 99 ? '99+' : eventsBadge}
+                </Text>
+              </View>
+            )}
+          </View>
           <View style={{ flex: 1, marginLeft: 12 }}>
-            <Text style={styles.travelLabel}>Encuentros de la manada</Text>
-            <Text style={styles.travelSub}>Asistí o organizá encuentros con therians</Text>
+            <Text style={styles.travelLabel}>
+              Encuentros de la manada
+              {eventsBadge > 0 ? `  ·  ${eventsBadge} nuevo${eventsBadge === 1 ? '' : 's'}` : ''}
+            </Text>
+            <Text style={styles.travelSub}>
+              {eventsBadge > 0
+                ? 'Hay actividad nueva: tocá para ver'
+                : 'Asistí o organizá encuentros con therians'}
+            </Text>
           </View>
           <Ionicons name="chevron-forward" size={20} color="#22c55e" />
         </TouchableOpacity>
@@ -308,6 +355,21 @@ const styles = StyleSheet.create({
   },
   travelLabel: { color: 'white', fontSize: 14, fontWeight: '600' },
   travelSub: { color: '#999', fontSize: 12, marginTop: 2 },
+  eventsBadge: {
+    position: 'absolute',
+    top: -8,
+    right: -10,
+    minWidth: 22,
+    height: 22,
+    borderRadius: 11,
+    paddingHorizontal: 6,
+    backgroundColor: '#ef4444',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: '#0a0a0a',
+  },
+  eventsBadgeText: { color: 'white', fontSize: 11, fontWeight: 'bold' },
   section: { marginBottom: 24 },
   sectionTitle: { color: 'white', fontSize: 17, fontWeight: 'bold', marginBottom: 12 },
   cityChip: {

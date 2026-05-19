@@ -3,6 +3,7 @@ import { saveData, loadData, STORAGE_KEYS } from "../services/storageService";
 import { AVATARS } from "../data/avatarAssets";
 import { supabase } from "../services/supabase";
 import { getProfile, upsertProfile, signOut as supabaseSignOut } from "../services/authService";
+import { applyPendingLegal } from "../services/legalConsentService";
 
 export const AuthContext = createContext();
 export default AuthContext;
@@ -346,6 +347,14 @@ export function AuthProvider({ children }) {
         profile = newProfile; // usar datos locales igual
       }
       setNewUser(true);
+    }
+
+    // 2.5 Si quedaron consents/birth_date pendientes del signup, aplicarlos ahora
+    // que ya hay sesión activa y RLS lo permite.
+    try {
+      await applyPendingLegal(authUser.id);
+    } catch (e) {
+      console.warn("No se pudo aplicar pending legal:", e?.message || e);
     }
 
     // 3. Siempre loguear al usuario, aunque falle la DB

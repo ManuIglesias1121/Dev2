@@ -26,12 +26,13 @@ export async function sendSuperMatch({ senderId, receiverId, message }) {
         .eq("sender_id", senderId)
         .eq("receiver_id", receiverId)
         .select()
-        .single();
+        .maybeSingle();
       if (updateError) {
         console.warn("No se pudo refrescar timestamp:", updateError.message);
         return null; // tratamos como "ya existía", el caller muestra "Ya enviado"
       }
-      return updated;
+      // updated puede ser null si la RLS no devolvió la fila — no es crítico
+      return updated || null;
     } catch (e) {
       console.warn("Error en update silencioso:", e?.message);
       return null;
@@ -58,7 +59,7 @@ export async function fetchReceivedSuperMatches(userId) {
   const senderIds = data.map((sm) => sm.sender_id);
   const { data: profiles } = await supabase
     .from("profiles")
-    .select("id, display_name, avatar_url, photos, primary_theriotype")
+    .select("id, display_name, avatar_url, photos, exclusive_photos, is_premium, primary_theriotype")
     .in("id", senderIds);
 
   return data.map((sm) => {
@@ -70,6 +71,8 @@ export async function fetchReceivedSuperMatches(userId) {
         display_name: profile?.display_name || "Therian",
         avatar: profile?.avatar_url || profile?.photos?.[0] || null,
         photos: profile?.photos || [],
+        exclusive_photos: profile?.exclusive_photos || [],
+        isPremium: profile?.is_premium || false,
         primary_theriotype: profile?.primary_theriotype || "Wolf",
       },
       message: sm.message,
@@ -129,10 +132,14 @@ export async function deleteSuperMatchById(id) {
   if (error) throw error;
 }
 
-// Suscripción Realtime: cuando alguien me manda un super match
+// Suscripción Realtime: cuando alguien me manda un super match.
+// Nombre de canal único por suscripción para evitar la colisión
+// "cannot add postgres_changes callbacks after subscribe()" cuando el
+// componente se re-monta antes de que removeChannel termine.
 export function subscribeToSuperMatches(userId, onNewSuperMatch) {
+  const channelName = `super_matches:${userId}:${Date.now()}:${Math.random().toString(36).slice(2, 8)}`;
   const channel = supabase
-    .channel(`super_matches:${userId}`)
+    .channel(channelName)
     .on(
       "postgres_changes",
       {
