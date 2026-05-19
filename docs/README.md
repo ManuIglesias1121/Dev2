@@ -8,12 +8,12 @@ Se publica con **GitHub Pages + Jekyll** (sin ningún build manual — GitHub se
 
 Una vez activado, los documentos van a quedar en:
 
-- `https://<tu-usuario>.github.io/<nombre-repo>/` — landing
-- `https://<tu-usuario>.github.io/<nombre-repo>/terminos.html`
-- `https://<tu-usuario>.github.io/<nombre-repo>/privacidad.html`
-- `https://<tu-usuario>.github.io/<nombre-repo>/comunidad.html`
+- `https://manuiglesias1121.github.io/Dev2/` — landing
+- `https://manuiglesias1121.github.io/Dev2/terminos.html`
+- `https://manuiglesias1121.github.io/Dev2/privacidad.html`
+- `https://manuiglesias1121.github.io/Dev2/comunidad.html`
 
-La constante `LEGAL_BASE_URL` en `src/pages/SettingsPage.js` apunta a `https://juanmanueliglesias-oss.github.io/TherianMatchConnect`. Si el repo tiene otro nombre, cambiar esa constante.
+La constante `LEGAL_BASE_URL` en `src/pages/SettingsPage.js` ya apunta a esa URL. Si el repo se mueve, cambiar esa constante.
 
 ## Cómo activar GitHub Pages (una sola vez)
 
@@ -28,7 +28,7 @@ La constante `LEGAL_BASE_URL` en `src/pages/SettingsPage.js` apunta a `https://j
 
 Cuando completes el formulario de "Data safety" / "Política de privacidad" en Google Play Console, usar:
 
-> `https://<tu-usuario>.github.io/<nombre-repo>/privacidad.html`
+> `https://manuiglesias1121.github.io/Dev2/privacidad.html`
 
 Esa URL **tiene que ser pública** y accesible sin login. GitHub Pages cumple.
 

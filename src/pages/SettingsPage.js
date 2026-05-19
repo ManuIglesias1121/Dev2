@@ -15,8 +15,8 @@ import { saveData, STORAGE_KEYS } from "../services/storageService";
 import { deleteMyAccount } from "../services/accountDeletionService";
 
 // URL pública donde se hostean los documentos legales (ver carpeta /docs).
-// Cambiar si el sitio se mueve. Hoy apunta a la rama main del repo en GitHub Pages.
-const LEGAL_BASE_URL = "https://juanmanueliglesias-oss.github.io/TherianMatchConnect";
+// Cambiar si el sitio se mueve a dominio propio.
+const LEGAL_BASE_URL = "https://manuiglesias1121.github.io/Dev2";
 
 function Section({ title, children }) {
   return (
