@@ -4,6 +4,7 @@ import React, { useEffect, useRef, useState } from "react";
 import {
   Alert,
   Animated,
+  Image,
   KeyboardAvoidingView,
   Linking,
   Platform,
@@ -127,7 +128,10 @@ export default function RegisterPage({ navigation }) {
       <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
         <Animated.View style={{ opacity: fadeAnim, alignItems: "center" }}>
 
-          <Text style={{ fontSize: 60, marginBottom: 12 }}>🐺</Text>
+          <View style={styles.logoContainer}>
+            <Image source={require("../../assets/unico.png")} style={styles.logo} />
+          </View>
+
           <Text style={styles.title}>Crear cuenta</Text>
           <Text style={styles.subtitle}>Únete a la manada</Text>
 
@@ -220,6 +224,19 @@ export default function RegisterPage({ navigation }) {
 
 const styles = StyleSheet.create({
   scroll: { flexGrow: 1, justifyContent: "center", paddingHorizontal: 28, paddingVertical: 60 },
+  logoContainer: {
+    width: 120,
+    height: 120,
+    borderRadius: 60,
+    backgroundColor: "#0f1f0f",
+    borderWidth: 2,
+    borderColor: "#22c55e44",
+    justifyContent: "center",
+    alignItems: "center",
+    marginBottom: 20,
+    overflow: "hidden",
+  },
+  logo: { width: 100, height: 100, resizeMode: "contain" },
   title: { color: "white", fontSize: 30, fontWeight: "bold", marginBottom: 6 },
   subtitle: { color: "#666", fontSize: 15, marginBottom: 36 },
   form: { width: "100%" },

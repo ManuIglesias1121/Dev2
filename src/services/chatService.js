@@ -130,10 +130,17 @@ export async function sendMessage({ conversationId, senderId, content, imageUrl 
   return data;
 }
 
+// Genera un sufijo único para evitar el error
+// "cannot add postgres_changes callbacks after subscribe()" que ocurre cuando
+// se intenta reutilizar el mismo topic de canal entre renders.
+function uniqueSuffix() {
+  return `${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+}
+
 // Suscripción a nuevos mensajes de una conversación (Realtime)
 export function subscribeToMessages(conversationId, onNewMessage) {
   const channel = supabase
-    .channel(`messages:${conversationId}`)
+    .channel(`messages:${conversationId}:${uniqueSuffix()}`)
     .on(
       "postgres_changes",
       {
@@ -154,7 +161,7 @@ export function subscribeToMessages(conversationId, onNewMessage) {
 // Suscripción a cambios en TODAS las conversaciones del usuario (para la lista)
 export function subscribeToConversations(userId, onChange) {
   const channel = supabase
-    .channel(`conversations:${userId}`)
+    .channel(`conversations:${userId}:${uniqueSuffix()}`)
     .on(
       "postgres_changes",
       { event: "*", schema: "public", table: "conversations" },

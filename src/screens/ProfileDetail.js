@@ -39,7 +39,12 @@ export default function ProfileDetailPage({ route, navigation }) {
   const [loadingExclusive, setLoadingExclusive] = useState(false);
 
   const isPremium = user?.isPremium || user?.is_premium || false;
-  const photos = profile.photos?.length ? profile.photos : profile.avatar ? [profile.avatar] : [];
+
+  // Solo URLs string son válidas para Image source.uri.
+  // Si profile.avatar es un require() (number) o un objeto raro, lo descartamos
+  // para evitar crash "Value for uri cannot be cast from Double to String".
+  const rawPhotos = profile.photos?.length ? profile.photos : profile.avatar ? [profile.avatar] : [];
+  const photos = rawPhotos.filter((p) => typeof p === "string" && p.length > 0);
   const hasExclusive = profile.exclusive_photos?.length > 0;
 
   useEffect(() => {
