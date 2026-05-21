@@ -27,7 +27,6 @@ export default function SwipeCard({
       duration: 300,
       useNativeDriver: false,
     }).start(() => {
-      pan.setValue({ x: 0, y: 0 });
       action?.();
     });
   };

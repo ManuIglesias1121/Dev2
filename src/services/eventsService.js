@@ -77,6 +77,15 @@ export async function createEvent({
   return data;
 }
 
+// Elimina un evento. La RLS de Supabase debe permitir DELETE sólo al host
+// (auth.uid() = host_id). Las filas en event_attendees / event_messages
+// caen por cascade definido en el schema.
+export async function deleteEvent(eventId) {
+  if (!eventId) throw new Error("Falta eventId");
+  const { error } = await supabase.from("events").delete().eq("id", eventId);
+  if (error) throw error;
+}
+
 // Lista eventos activos próximos (futuros), con info del host
 export async function fetchUpcomingEvents({ city, limit = 50 } = {}) {
   const now = new Date().toISOString();

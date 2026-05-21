@@ -1,6 +1,7 @@
 import React, { useState, useCallback } from "react";
 import {
   ActivityIndicator,
+  Alert,
   FlatList,
   Image,
   ScrollView,
@@ -13,7 +14,7 @@ import { useNavigation, useFocusEffect } from "@react-navigation/native";
 import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
 import { useAuth } from "../contexts/AuthContext";
-import { fetchUpcomingEvents, fetchEventsImAttending } from "../services/eventsService";
+import { fetchUpcomingEvents, fetchEventsImAttending, deleteEvent } from "../services/eventsService";
 
 function resolveSource(img) {
   if (!img) return require("../../assets/logo1.png");
@@ -69,10 +70,39 @@ export default function EventsListPage() {
     navigation.navigate("EventCreate");
   };
 
+  const handleLongPress = (item) => {
+    const isHost = item.host?.id && user?.supabaseId && item.host.id === user.supabaseId;
+    if (!isHost) {
+      Alert.alert("Sólo el organizador", "Sólo quien creó el encuentro puede eliminarlo.");
+      return;
+    }
+    Alert.alert(
+      "Eliminar encuentro",
+      `¿Eliminar "${item.title}"? Esta acción borra el evento, los asistentes y los mensajes asociados.`,
+      [
+        { text: "Cancelar", style: "cancel" },
+        {
+          text: "Eliminar",
+          style: "destructive",
+          onPress: async () => {
+            try {
+              await deleteEvent(item.id);
+              setEvents((prev) => prev.filter((e) => e.id !== item.id));
+            } catch (e) {
+              Alert.alert("Error", e?.message || "No se pudo eliminar el encuentro");
+            }
+          },
+        },
+      ]
+    );
+  };
+
   const renderEvent = ({ item }) => (
     <TouchableOpacity
       style={styles.card}
       onPress={() => navigation.navigate("EventDetail", { eventId: item.id })}
+      onLongPress={() => handleLongPress(item)}
+      delayLongPress={400}
     >
       {item.cover_url ? (
         <Image source={{ uri: item.cover_url }} style={styles.cover} />
@@ -129,6 +159,9 @@ export default function EventsListPage() {
         </View>
         <Text style={styles.headerSub}>
           {isPremium ? "Crea encuentros y conocé therians cerca tuyo" : "Únete a encuentros de la manada"}
+        </Text>
+        <Text style={[styles.headerSub, { fontSize: 11, opacity: 0.7, marginTop: 2 }]}>
+          Mantené apretado un encuentro tuyo para eliminarlo
         </Text>
       </LinearGradient>
 

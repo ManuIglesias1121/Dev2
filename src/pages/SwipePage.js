@@ -247,6 +247,7 @@ export default function SwipePage() {
       {!noMoreVisible && current ? (
         <Animated.View style={{ flex: 1, opacity: fadeAnim }}>
           <SwipeCard
+            key={current.id ?? index}
             profile={current}
             onNope={handleSwipe}
             onLike={handleLike}

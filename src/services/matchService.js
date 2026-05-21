@@ -23,6 +23,55 @@ export async function sendLike({ likerId, likedId }) {
   return { liked: true, isMatch: !!match };
 }
 
+// Lista los likes que YO di que aún NO son match mutuo (esperando respuesta).
+// Incluye perfil del receptor para mostrarlos en "Matches enviados".
+export async function fetchSentLikes(userId) {
+  if (!userId) return [];
+
+  const { data: likes, error } = await supabase
+    .from("likes")
+    .select("id, liked_id, created_at")
+    .eq("liker_id", userId)
+    .order("created_at", { ascending: false });
+
+  if (error) throw error;
+  if (!likes || likes.length === 0) return [];
+
+  // Filtrar los que ya tienen match mutuo (se mostrarán en Conversaciones)
+  const { data: matches } = await supabase
+    .from("matches")
+    .select("user_a_id, user_b_id")
+    .or(`user_a_id.eq.${userId},user_b_id.eq.${userId}`);
+
+  const matchedIds = new Set(
+    (matches || []).map((m) => (m.user_a_id === userId ? m.user_b_id : m.user_a_id))
+  );
+
+  const pending = likes.filter((l) => !matchedIds.has(l.liked_id));
+  if (pending.length === 0) return [];
+
+  const receiverIds = pending.map((l) => l.liked_id);
+  const { data: profiles } = await supabase
+    .from("profiles")
+    .select("id, display_name, avatar_url, photos, primary_theriotype")
+    .in("id", receiverIds);
+
+  return pending.map((l) => {
+    const profile = profiles?.find((p) => p.id === l.liked_id);
+    return {
+      id: l.id,
+      created_at: l.created_at,
+      receiver: {
+        id: l.liked_id,
+        display_name: profile?.display_name || "Therian",
+        avatar: profile?.avatar_url || profile?.photos?.[0] || null,
+        photos: profile?.photos || [],
+        primary_theriotype: profile?.primary_theriotype || "Wolf",
+      },
+    };
+  });
+}
+
 // Lista los matches mutuos del usuario (con info del otro perfil)
 export async function fetchMatches(userId) {
   if (!userId) return [];

@@ -1,7 +1,6 @@
 import { Vibration } from "react-native";
 import { loadData, saveData } from "./storageService";
 
-// Asset de sonido (rugido de león, perfecto para therians 🦁)
 const NOTIFICATION_SOUND = require("../../assets/sounds/notification.mp3");
 
 const SOUND_PREFS_KEY = "sound_preferences";
@@ -135,7 +134,6 @@ export async function playFeedback(featureKey) {
     } catch {}
   }
 
-  // Sonido (rugido de león)
   if (prefs.mode === "both" || prefs.mode === "sound") {
     await playSound();
   }

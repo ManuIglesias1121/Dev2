@@ -145,7 +145,12 @@ export default function ProfileDetailPage({ route, navigation }) {
         {/* FOTO */}
         <View style={{ position: "relative" }}>
           {photos.length > 0 ? (
-            <Image source={{ uri: photos[currentPhoto] }} style={styles.photo} />
+            <TouchableOpacity
+              activeOpacity={0.9}
+              onPress={() => navigation.navigate("GalleryPage", { photos, initialIndex: currentPhoto })}
+            >
+              <Image source={{ uri: photos[currentPhoto] }} style={styles.photo} />
+            </TouchableOpacity>
           ) : (
             <View style={[styles.photo, { backgroundColor: "#1a1a1a", justifyContent: "center", alignItems: "center" }]}>
               <Text style={{ fontSize: 64 }}>👤</Text>
@@ -244,7 +249,14 @@ export default function ProfileDetailPage({ route, navigation }) {
               <Text style={{ color: "white", fontSize: 18, fontWeight: "bold", marginBottom: 12 }}>Fotos</Text>
               <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
                 {photos.map((p, i) => (
-                  <TouchableOpacity key={i} onPress={() => setCurrentPhoto(i)} style={{ width: "31%", aspectRatio: 1 }}>
+                  <TouchableOpacity
+                    key={i}
+                    onPress={() => {
+                      setCurrentPhoto(i);
+                      navigation.navigate("GalleryPage", { photos, initialIndex: i });
+                    }}
+                    style={{ width: "31%", aspectRatio: 1 }}
+                  >
                     <Image source={{ uri: p }} style={{ width: "100%", height: "100%", borderRadius: 10, borderWidth: currentPhoto === i ? 2 : 0, borderColor: "#22c55e" }} />
                   </TouchableOpacity>
                 ))}
@@ -268,9 +280,13 @@ export default function ProfileDetailPage({ route, navigation }) {
                 ) : (
                   <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
                     {exclusiveUrls.map((url, i) => (
-                      <View key={i} style={{ width: "31%", aspectRatio: 1 }}>
+                      <TouchableOpacity
+                        key={i}
+                        onPress={() => navigation.navigate("GalleryPage", { photos: exclusiveUrls, initialIndex: i })}
+                        style={{ width: "31%", aspectRatio: 1 }}
+                      >
                         <Image source={{ uri: url }} style={{ width: "100%", height: "100%", borderRadius: 10 }} />
-                      </View>
+                      </TouchableOpacity>
                     ))}
                   </View>
                 )

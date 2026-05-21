@@ -12,14 +12,18 @@ export async function getTherianProfiles(currentUserId) {
       query = query.neq("id", currentUserId);
     }
 
+    const excludedIds = currentUserId ? await getExcludedProfileIds(currentUserId) : new Set();
+
     const { data, error } = await query;
 
     if (error || !data || data.length === 0) {
       return fakeProfiles;
     }
 
+    const visible = excludedIds.size ? data.filter((p) => !excludedIds.has(p.id)) : data;
+
     // Mapear campos de Supabase al formato que usa la app
-    const real = data.map((p) => ({
+    const real = visible.map((p) => ({
       id: p.id,
       display_name: p.display_name || "Therian",
       name: p.display_name || "Therian",
@@ -44,4 +48,28 @@ export async function getTherianProfiles(currentUserId) {
   } catch {
     return fakeProfiles;
   }
+}
+
+// IDs de perfiles que NO deben aparecer en el feed de swipe:
+// - ya les di like (likes.liker_id = me)
+// - ya les mandé super match (super_matches.sender_id = me)
+// - los bloqueé yo o ellos a mí (user_blocks en cualquier dirección)
+// Los matches ya están cubiertos por likes (siempre existe el like previo).
+async function getExcludedProfileIds(currentUserId) {
+  const excluded = new Set();
+  try {
+    const [likes, superMatches, blocksOut, blocksIn] = await Promise.all([
+      supabase.from("likes").select("liked_id").eq("liker_id", currentUserId),
+      supabase.from("super_matches").select("receiver_id").eq("sender_id", currentUserId),
+      supabase.from("user_blocks").select("blocked_id").eq("blocker_id", currentUserId),
+      supabase.from("user_blocks").select("blocker_id").eq("blocked_id", currentUserId),
+    ]);
+    (likes.data || []).forEach((r) => r.liked_id && excluded.add(r.liked_id));
+    (superMatches.data || []).forEach((r) => r.receiver_id && excluded.add(r.receiver_id));
+    (blocksOut.data || []).forEach((r) => r.blocked_id && excluded.add(r.blocked_id));
+    (blocksIn.data || []).forEach((r) => r.blocker_id && excluded.add(r.blocker_id));
+  } catch (e) {
+    console.warn("No se pudieron cargar exclusiones del feed:", e?.message);
+  }
+  return excluded;
 }

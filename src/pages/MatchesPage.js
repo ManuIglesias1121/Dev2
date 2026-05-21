@@ -21,8 +21,9 @@ import { Ionicons } from "@expo/vector-icons";
 import { useAuth } from "../contexts/AuthContext";
 import { fakeMatches } from "../data/fakeMatches";
 import { loadData, saveData } from "../services/storageService";
-import { fetchReceivedSuperMatches, subscribeToSuperMatches } from "../services/superMatchService";
-import { fetchMatches, subscribeToMatches } from "../services/matchService";
+import { fetchReceivedSuperMatches, fetchSentSuperMatches, subscribeToSuperMatches } from "../services/superMatchService";
+import { fetchMatches, fetchSentLikes, subscribeToMatches } from "../services/matchService";
+import { fetchConversations, subscribeToConversations } from "../services/chatService";
 
 const DELETED_MATCHES_KEY = "deleted_matches";
 
@@ -47,9 +48,21 @@ export default function MatchesPage() {
     setDeletedIds(deleted);
 
     let realSupers = [];
+    let realSent = [];
+    let realSentLikes = [];
     let realMutual = [];
+    let convByUserId = {};
 
     if (user?.supabaseId) {
+      try {
+        const convs = await fetchConversations(user.supabaseId);
+        for (const c of convs) {
+          convByUserId[c.otherUserId] = c;
+        }
+      } catch (e) {
+        console.warn("Error cargando conversaciones:", e?.message);
+      }
+
       try {
         const supers = await fetchReceivedSuperMatches(user.supabaseId);
         setUnreadSuperCount(supers.filter((sm) => !sm.is_read).length);
@@ -76,35 +89,104 @@ export default function MatchesPage() {
       }
 
       try {
-        const mutual = await fetchMatches(user.supabaseId);
-        realMutual = mutual.map((m) => ({
-          id: `match_${m.id}`,
-          display_name: m.other.display_name,
-          avatar: m.other.avatar,
-          photos: m.other.photos,
-          exclusive_photos: m.other.exclusive_photos || [],
-          primary_theriotype: m.other.primary_theriotype,
-          age: m.other.age,
-          city: m.other.city,
+        const sent = await fetchSentSuperMatches(user.supabaseId);
+        realSent = sent.map((sm) => ({
+          id: `sent_${sm.id}`,
+          display_name: sm.sender.display_name,
+          avatar: sm.sender.avatar,
+          photos: sm.sender.photos || [],
+          exclusive_photos: [],
+          primary_theriotype: sm.sender.primary_theriotype,
+          age: null,
+          city: null,
           biography: null,
           distance: null,
-          isPremium: m.other.isPremium || false,
+          isPremium: false,
           isOnline: false,
           unreadCount: 0,
-          lastMessage: "¡Hicieron match! 💚 Mandá el primer mensaje",
-          matchedAt: m.created_at,
-          targetUserId: m.other.id,
+          lastMessage: "Esperando respuesta...",
+          matchedAt: sm.created_at,
+          targetUserId: sm.sender.id,
+          isSent: true,
         }));
+      } catch (e) {
+        console.warn("Error cargando super matches enviados:", e?.message);
+      }
+
+      try {
+        const sentLikes = await fetchSentLikes(user.supabaseId);
+        realSentLikes = sentLikes.map((l) => ({
+          id: `sentlike_${l.id}`,
+          display_name: l.receiver.display_name,
+          avatar: l.receiver.avatar,
+          photos: l.receiver.photos || [],
+          exclusive_photos: [],
+          primary_theriotype: l.receiver.primary_theriotype,
+          age: null,
+          city: null,
+          biography: null,
+          distance: null,
+          isPremium: false,
+          isOnline: false,
+          unreadCount: 0,
+          lastMessage: "Esperando respuesta...",
+          matchedAt: l.created_at,
+          targetUserId: l.receiver.id,
+          isSent: true,
+        }));
+      } catch (e) {
+        console.warn("Error cargando likes enviados:", e?.message);
+      }
+
+      try {
+        const mutual = await fetchMatches(user.supabaseId);
+        realMutual = mutual.map((m) => {
+          const conv = convByUserId[m.other.id];
+          const last = conv?.lastMessage;
+          let lastText = "¡Hicieron match! 💚 Mandá el primer mensaje";
+          if (last) {
+            if (last.content) lastText = last.content;
+            else if (last.image_url) lastText = "📷 Imagen";
+          }
+          return {
+            id: `match_${m.id}`,
+            display_name: m.other.display_name,
+            avatar: m.other.avatar,
+            photos: m.other.photos,
+            exclusive_photos: m.other.exclusive_photos || [],
+            primary_theriotype: m.other.primary_theriotype,
+            age: m.other.age,
+            city: m.other.city,
+            biography: null,
+            distance: null,
+            isPremium: m.other.isPremium || false,
+            isOnline: false,
+            unreadCount: conv?.unreadCount || 0,
+            lastMessage: lastText,
+            matchedAt: conv?.lastMessageAt || m.created_at,
+            targetUserId: m.other.id,
+          };
+        });
+        realMutual.sort((a, b) => new Date(b.matchedAt) - new Date(a.matchedAt));
       } catch (e) {
         console.warn("Error cargando matches mutuos:", e?.message);
       }
     }
 
-    // Dedup: si una persona está en mutual y en super, priorizar mutual
+    // Dedup: si ya hay match mutuo con esa persona, sacarla de super matches
+    // y likes enviados — el mutual gana porque ya pueden chatear.
+    // También dedupe entre sentLikes y sentSupers (si mandé ambos, gana el super).
     const mutualUserIds = new Set(realMutual.map((m) => m.targetUserId));
     const supersFiltered = realSupers.filter((s) => !mutualUserIds.has(s.targetUserId));
+    const sentSuperUserIds = new Set(realSent.map((s) => s.targetUserId));
+    const sentMerged = [
+      ...realSent.filter((s) => !mutualUserIds.has(s.targetUserId)),
+      ...realSentLikes.filter(
+        (s) => !mutualUserIds.has(s.targetUserId) && !sentSuperUserIds.has(s.targetUserId)
+      ),
+    ];
 
-    setMatches([...realMutual, ...supersFiltered, ...fakeMatches]);
+    setMatches([...realMutual, ...supersFiltered, ...sentMerged, ...fakeMatches]);
   }, [user?.supabaseId]);
 
   useFocusEffect(
@@ -113,14 +195,16 @@ export default function MatchesPage() {
     }, [loadMatches])
   );
 
-  // Realtime: si llega un super match o match nuevo, actualizar
+  // Realtime: si llega super match, match nuevo o mensaje nuevo, refrescar la lista
   useEffect(() => {
     if (!user?.supabaseId) return;
     const unsubSupers = subscribeToSuperMatches(user.supabaseId, () => loadMatches());
     const unsubMatches = subscribeToMatches(user.supabaseId, () => loadMatches());
+    const unsubConvs = subscribeToConversations(user.supabaseId, () => loadMatches());
     return () => {
       unsubSupers();
       unsubMatches();
+      unsubConvs();
     };
   }, [user?.supabaseId, loadMatches]);
 
@@ -148,12 +232,10 @@ export default function MatchesPage() {
     m.display_name.toLowerCase().includes(search.toLowerCase())
   );
 
-  const newMatches = filtered.filter(
-    (m) => Date.now() - new Date(m.matchedAt).getTime() < 1000 * 60 * 60 * 24
-  );
-  const olderMatches = filtered.filter(
-    (m) => Date.now() - new Date(m.matchedAt).getTime() >= 1000 * 60 * 60 * 24
-  );
+  // Sección horizontal arriba = super matches que YO envié esperando respuesta.
+  // Conversaciones = matches mutuos + super matches recibidos (con quienes puedo chatear).
+  const sentMatches = filtered.filter((m) => m.isSent);
+  const olderMatches = filtered.filter((m) => !m.isSent);
 
   const goToChat = (match) => {
     const isRealUser = match.targetUserId && typeof match.targetUserId === "string" && match.targetUserId.length > 30;
@@ -340,12 +422,12 @@ export default function MatchesPage() {
         data={[]}
         ListHeaderComponent={() => (
           <>
-            {/* NUEVOS MATCHES */}
-            {newMatches.length > 0 && (
+            {/* MATCHES ENVIADOS (super matches que yo mandé, esperando respuesta) */}
+            {sentMatches.length > 0 && (
               <View style={{ marginBottom: 20 }}>
-                <Text style={styles.sectionTitle}>Nuevos matches ✨</Text>
+                <Text style={[styles.sectionTitle, { paddingHorizontal: 16 }]}>Matches enviados ✨</Text>
                 <FlatList
-                  data={newMatches}
+                  data={sentMatches}
                   keyExtractor={(m) => `bubble_${m.id}`}
                   horizontal
                   showsHorizontalScrollIndicator={false}
