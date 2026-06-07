@@ -16,8 +16,10 @@ import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
 import { useAuth } from "../contexts/AuthContext";
 import { signIn } from "../services/authService";
-import { saveData, loadData } from "../services/storageService";
+import { saveData, loadData, removeData, saveSecure, loadSecure } from "../services/storageService";
 
+// Email y contraseña del login biométrico van CIFRADOS (SecureStore).
+// El flag de habilitado no es sensible y queda en AsyncStorage.
 const BIO_EMAIL_KEY = "bio_saved_email";
 const BIO_PASS_KEY = "bio_saved_pass";
 const BIO_ENABLED_KEY = "bio_enabled";
@@ -56,10 +58,22 @@ export default function LoginPage({ navigation }) {
       const enrolled = await mod.isEnrolledAsync();
       if (has && enrolled) {
         setBioAvailable(true);
+
+        // Migración: credenciales viejas en AsyncStorage (texto plano) ->
+        // moverlas a SecureStore y borrar el residuo inseguro. Una sola vez.
+        const legacyPass = await loadData(BIO_PASS_KEY, "");
+        if (legacyPass) {
+          const legacyEmail = await loadData(BIO_EMAIL_KEY, "");
+          if (legacyEmail) await saveSecure(BIO_EMAIL_KEY, legacyEmail);
+          await saveSecure(BIO_PASS_KEY, legacyPass);
+          await removeData(BIO_PASS_KEY);
+          await removeData(BIO_EMAIL_KEY);
+        }
+
         const enabled = await loadData(BIO_ENABLED_KEY, false);
         setBioEnabled(enabled);
         if (enabled) {
-          const savedEmail = await loadData(BIO_EMAIL_KEY, "");
+          const savedEmail = await loadSecure(BIO_EMAIL_KEY, "");
           if (savedEmail) setEmail(savedEmail);
         }
       }
@@ -95,8 +109,9 @@ export default function LoginPage({ navigation }) {
             {
               text: "Sí, activar",
               onPress: async () => {
-                await saveData(BIO_EMAIL_KEY, loginEmail);
-                await saveData(BIO_PASS_KEY, loginPass);
+                // Credenciales sensibles -> SecureStore (cifrado)
+                await saveSecure(BIO_EMAIL_KEY, loginEmail);
+                await saveSecure(BIO_PASS_KEY, loginPass);
                 await saveData(BIO_ENABLED_KEY, true);
               },
             },
@@ -127,9 +142,9 @@ export default function LoginPage({ navigation }) {
         try {
           await restoreStoredSession();
         } catch {
-          // Si falla, intentar con credenciales guardadas
-          const savedEmail = await loadData(BIO_EMAIL_KEY, "");
-          const savedPass = await loadData(BIO_PASS_KEY, "");
+          // Si falla, intentar con credenciales guardadas (cifradas)
+          const savedEmail = await loadSecure(BIO_EMAIL_KEY, "");
+          const savedPass = await loadSecure(BIO_PASS_KEY, "");
           if (savedEmail && savedPass) {
             await handleLogin(savedEmail, savedPass);
           }
@@ -137,8 +152,8 @@ export default function LoginPage({ navigation }) {
           setLoading(false);
         }
       } else {
-        const savedEmail = await loadData(BIO_EMAIL_KEY, "");
-        const savedPass = await loadData(BIO_PASS_KEY, "");
+        const savedEmail = await loadSecure(BIO_EMAIL_KEY, "");
+        const savedPass = await loadSecure(BIO_PASS_KEY, "");
         if (savedEmail && savedPass) {
           await handleLogin(savedEmail, savedPass);
         } else {

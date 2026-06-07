@@ -49,6 +49,54 @@ export async function clearAll() {
   } catch {}
 }
 
+// ---------------------------------------------------------
+// Almacenamiento SEGURO (cifrado) — para credenciales sensibles
+// como la contraseña usada en login biométrico. Usa expo-secure-store
+// (Keystore en Android / Keychain en iOS). Solo guarda strings.
+// ---------------------------------------------------------
+let SecureStore = null;
+
+async function getSecureStore() {
+  if (SecureStore) return SecureStore;
+  try {
+    const mod = await import("expo-secure-store");
+    SecureStore = mod;
+    return SecureStore;
+  } catch {
+    return null;
+  }
+}
+
+export async function saveSecure(key, value) {
+  const store = await getSecureStore();
+  if (!store) return false;
+  try {
+    await store.setItemAsync(key, String(value));
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+export async function loadSecure(key, fallback = null) {
+  const store = await getSecureStore();
+  if (!store) return fallback;
+  try {
+    const raw = await store.getItemAsync(key);
+    return raw != null ? raw : fallback;
+  } catch {
+    return fallback;
+  }
+}
+
+export async function removeSecure(key) {
+  const store = await getSecureStore();
+  if (!store) return;
+  try {
+    await store.deleteItemAsync(key);
+  } catch {}
+}
+
 // Claves del storage
 export const STORAGE_KEYS = {
   USER_PROFILE: "user_profile",
