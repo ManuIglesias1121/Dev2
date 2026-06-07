@@ -1,18 +1,11 @@
 import { supabase } from "./supabase";
 
-export async function signUp(email, password, displayName, birthDateIso = null) {
-  const { data, error } = await supabase.auth.signUp({
-    email,
-    password,
-    options: {
-      data: {
-        display_name: displayName,
-        // birth_date queda en user_metadata como respaldo para el trigger
-        // handle_new_user (si lo lee). El upsert post-signup lo asegura igual.
-        birth_date: birthDateIso,
-      },
-    },
-  });
+export async function signUp(email, password, displayName = null) {
+  // Registro mínimo: solo email + contraseña. El display_name se autocompleta
+  // en el AuthContext a partir del email si no se manda. La fecha de nacimiento
+  // ya no se pide en el alta (se reemplazó por checkbox de mayoría).
+  const options = displayName ? { data: { display_name: displayName } } : undefined;
+  const { data, error } = await supabase.auth.signUp({ email, password, options });
   if (error) throw error;
   return data;
 }

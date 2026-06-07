@@ -15,21 +15,21 @@ const plans = [
   {
     id: "mensual",
     title: "Mensual",
-    price: "$4.99",
+    price: "$3",
     subtitle: "30 días de premium",
     description: "Prueba la manada por un mes.",
   },
   {
     id: "trimestral",
     title: "Trimestral",
-    price: "$12.99",
+    price: "$3",
     subtitle: "Ahorra 10%",
     description: "Conecta más y destacate más tiempo.",
   },
   {
     id: "anual",
     title: "Anual",
-    price: "$39.99",
+    price: "$3",
     subtitle: "Mejor valor",
     description: "Máxima visibilidad y beneficios premium.",
   },
@@ -133,6 +133,7 @@ export default function PremiumPage({ navigation }) {
                     <Text style={[styles.planTitle, active && styles.planTitleActive]}>{plan.title}</Text>
                     <Text style={[styles.planPrice, active && styles.planPriceActive]}>{plan.price}</Text>
                   </View>
+                  <Text style={styles.promoNote}>Precio promocional · pronto $5</Text>
                   <Text style={[styles.planSubtitle, active && styles.planSubtitleActive]}>{plan.subtitle}</Text>
                   <Text style={[styles.planDesc, active && styles.planDescActive]}>{plan.description}</Text>
                 </TouchableOpacity>
@@ -238,6 +239,13 @@ const styles = StyleSheet.create({
   },
   planPriceActive: {
     color: "#22c55e",
+  },
+  promoNote: {
+    color: "#f59e0b",
+    fontSize: 11,
+    fontStyle: "italic",
+    marginTop: 2,
+    marginBottom: 6,
   },
   planSubtitle: {
     color: "#888",

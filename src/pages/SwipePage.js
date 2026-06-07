@@ -1,12 +1,14 @@
 import React, { useEffect, useState, useMemo, useRef, useCallback } from "react";
 import {
   ActivityIndicator,
+  Alert,
   Animated,
   FlatList,
   Modal,
   ScrollView,
   StyleSheet,
   Text,
+  TextInput,
   TouchableOpacity,
   View,
 } from "react-native";
@@ -22,6 +24,7 @@ import { sendSuperMatch } from "../services/superMatchService";
 import { sendLike } from "../services/matchService";
 import { useAuth } from "../contexts/AuthContext";
 import { saveData, loadData, STORAGE_KEYS } from "../services/storageService";
+import { getCurrentLocation, reverseGeocode } from "../services/locationService";
 
 const THERIOTYPES_OPTIONS = [
   "Wolf", "Fox", "Crow", "Serpent", "Panther", "Tiger",
@@ -47,23 +50,94 @@ export default function SwipePage() {
   const [noMoreVisible, setNoMoreVisible] = useState(false);
   const [matchModal, setMatchModal] = useState(null);
   const navigation = useNavigation();
-  const { user, swipeProfile } = useAuth();
+  const { user, swipeProfile, updateUser } = useAuth();
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const swipeCount = useRef(0);
-  const isPremium = user?.plan && user.plan !== "free";
+  const isPremium = user?.isPremium || user?.is_premium || (user?.plan && user.plan !== "free");
+
+  // PASAPORTE: ciudad por la que estamos "viajando" (solo premium).
+  // null = mi ciudad real (default).
+  const [passportCity, setPassportCity] = useState(null);
+  const [showPassport, setShowPassport] = useState(false);
+  const [passportInput, setPassportInput] = useState("");
+  const [detectingCity, setDetectingCity] = useState(false);
+
+  const userCity = user?.city || null;
+  const activeCity = isPremium ? (passportCity || userCity) : userCity;
 
   const loadProfiles = useCallback(async () => {
-    const data = await getTherianProfiles(user?.supabaseId || user?.id);
+    const data = await getTherianProfiles({
+      currentUserId: user?.supabaseId || user?.id,
+      userCity,
+      isPremium,
+      targetCity: isPremium ? passportCity : null,
+    });
     setProfiles(data);
     setIndex(0);
     setNoMoreVisible(false);
     setLoading(false);
     Animated.timing(fadeAnim, { toValue: 1, duration: 500, useNativeDriver: true }).start();
-  }, [user?.supabaseId, user?.id]);
+  }, [user?.supabaseId, user?.id, userCity, isPremium, passportCity]);
 
   useEffect(() => {
     loadProfiles();
   }, [loadProfiles]);
+
+  // Si el usuario free no tiene ciudad asignada, intentar autodetectarla con GPS.
+  // Sin ciudad el feed cae a "todo" pero conviene mostrarle perfiles cercanos.
+  useEffect(() => {
+    if (userCity || !user?.supabaseId) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const loc = await getCurrentLocation();
+        if (!loc || cancelled) return;
+        const geo = await reverseGeocode(loc.latitude, loc.longitude);
+        if (geo?.city && !cancelled) {
+          updateUser?.({ city: geo.city });
+          // Persistir en DB también
+          const { supabase } = await import("../services/supabase");
+          supabase.from("profiles").update({ city: geo.city }).eq("id", user.supabaseId).then(() => {});
+        }
+      } catch {}
+    })();
+    return () => { cancelled = true; };
+  }, [userCity, user?.supabaseId, updateUser]);
+
+  const applyPassport = () => {
+    const c = passportInput.trim();
+    if (!c) return Alert.alert("Falta ciudad", "Escribí el nombre de una ciudad.");
+    setPassportCity(c);
+    setShowPassport(false);
+    setPassportInput("");
+  };
+
+  const resetPassport = () => {
+    setPassportCity(null);
+    setShowPassport(false);
+    setPassportInput("");
+  };
+
+  const detectMyCity = async () => {
+    setDetectingCity(true);
+    try {
+      const loc = await getCurrentLocation();
+      if (!loc) {
+        Alert.alert("Sin permiso", "Activá la ubicación para usar tu ciudad real.");
+        return;
+      }
+      const geo = await reverseGeocode(loc.latitude, loc.longitude);
+      if (geo?.city) {
+        setPassportInput(geo.city);
+      } else {
+        Alert.alert("Error", "No pudimos detectar tu ciudad.");
+      }
+    } catch {
+      Alert.alert("Error", "No pudimos obtener la ubicación.");
+    } finally {
+      setDetectingCity(false);
+    }
+  };
 
   // Recargar perfiles cuando la pantalla vuelve a tener foco (nuevos registros)
   useFocusEffect(
@@ -150,7 +224,6 @@ export default function SwipePage() {
       name: other.display_name || other.name,
       photo: other.avatar || other.photos?.[0],
       photos: other.photos || (other.avatar ? [other.avatar] : []),
-      exclusivePhotos: other.exclusive_photos || [],
       otherIsPremium: other.isPremium,
       primaryTheriotype: other.primary_theriotype,
       contactId: other.id,
@@ -237,10 +310,48 @@ export default function SwipePage() {
       {/* HEADER */}
       <View style={styles.header}>
         <Text style={styles.logo}>TherianMatchConnect</Text>
-        <TouchableOpacity onPress={() => { setPendingFilters(filters); setShowFilters(true); }} style={styles.filterBtn}>
-          <Ionicons name="options-outline" size={22} color={filtersActive ? "#22c55e" : "white"} />
-          {filtersActive && <View style={styles.filterDot} />}
-        </TouchableOpacity>
+        <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+          <TouchableOpacity
+            onPress={() => {
+              if (!isPremium) {
+                Alert.alert(
+                  "🌎 Pasaporte (Premium)",
+                  "Con Premium podés ver perfiles de otras ciudades. Los usuarios gratuitos solo ven gente de su zona.",
+                  [
+                    { text: "Más tarde", style: "cancel" },
+                    { text: "Ver Premium", onPress: () => navigation.navigate("PremiumPlans") },
+                  ]
+                );
+                return;
+              }
+              setPassportInput(passportCity || "");
+              setShowPassport(true);
+            }}
+            style={styles.passportBtn}
+          >
+            <Ionicons name="airplane-outline" size={20} color={passportCity ? "#a78bfa" : "white"} />
+            {passportCity && <View style={styles.passportDot} />}
+          </TouchableOpacity>
+          <TouchableOpacity onPress={() => { setPendingFilters(filters); setShowFilters(true); }} style={styles.filterBtn}>
+            <Ionicons name="options-outline" size={22} color={filtersActive ? "#22c55e" : "white"} />
+            {filtersActive && <View style={styles.filterDot} />}
+          </TouchableOpacity>
+        </View>
+      </View>
+
+      {/* INDICADOR DE ZONA ACTIVA */}
+      <View style={styles.zoneBar}>
+        <Ionicons name="location-outline" size={14} color={passportCity ? "#a78bfa" : "#666"} />
+        <Text style={[styles.zoneText, passportCity && { color: "#a78bfa" }]}>
+          {passportCity
+            ? `Pasaporte: ${passportCity}`
+            : (activeCity ? `Tu zona: ${activeCity}` : "Sin ciudad asignada · editá tu perfil")}
+        </Text>
+        {passportCity && (
+          <TouchableOpacity onPress={resetPassport}>
+            <Text style={styles.zoneReset}>Volver a mi zona</Text>
+          </TouchableOpacity>
+        )}
       </View>
 
       {/* SWIPE AREA */}
@@ -302,6 +413,59 @@ export default function SwipePage() {
         onSendMessage={openMatchChat}
         onKeepSwiping={closeMatchModal}
       />
+
+      {/* MODAL PASAPORTE (premium) */}
+      <Modal visible={showPassport} transparent animationType="slide" onRequestClose={() => setShowPassport(false)}>
+        <View style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.85)", justifyContent: "flex-end" }}>
+          <View style={styles.passportSheet}>
+            <View style={{ width: 40, height: 4, backgroundColor: "#333", borderRadius: 2, alignSelf: "center", marginBottom: 16 }} />
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 10, marginBottom: 6 }}>
+              <Ionicons name="airplane" size={22} color="#a78bfa" />
+              <Text style={{ color: "white", fontSize: 20, fontWeight: "bold" }}>Pasaporte</Text>
+              <View style={{ backgroundColor: "#a78bfa22", borderRadius: 10, paddingHorizontal: 8, paddingVertical: 2, borderWidth: 1, borderColor: "#a78bfa" }}>
+                <Text style={{ color: "#c084fc", fontSize: 10, fontWeight: "bold" }}>👑 PREMIUM</Text>
+              </View>
+            </View>
+            <Text style={{ color: "#888", fontSize: 13, marginBottom: 18 }}>
+              Escribí una ciudad para ver perfiles de esa zona. Volvé a tu zona cuando quieras.
+            </Text>
+
+            <View style={{ flexDirection: "row", gap: 8, marginBottom: 12 }}>
+              <TextInput
+                value={passportInput}
+                onChangeText={setPassportInput}
+                placeholder="Ej: Buenos Aires"
+                placeholderTextColor="#555"
+                style={styles.passportInput}
+                autoFocus
+                returnKeyType="done"
+                onSubmitEditing={applyPassport}
+              />
+              <TouchableOpacity
+                onPress={detectMyCity}
+                disabled={detectingCity}
+                style={styles.passportDetectBtn}
+              >
+                <Ionicons name={detectingCity ? "sync" : "locate"} size={18} color="#a78bfa" />
+              </TouchableOpacity>
+            </View>
+
+            <TouchableOpacity onPress={applyPassport} style={styles.passportApplyBtn}>
+              <Text style={{ color: "white", fontWeight: "bold", fontSize: 15 }}>Viajar a esta ciudad</Text>
+            </TouchableOpacity>
+
+            {passportCity && (
+              <TouchableOpacity onPress={resetPassport} style={styles.passportResetBtn}>
+                <Text style={{ color: "#aaa", fontSize: 14 }}>Volver a mi zona ({userCity || "sin ciudad"})</Text>
+              </TouchableOpacity>
+            )}
+
+            <TouchableOpacity onPress={() => setShowPassport(false)} style={{ alignItems: "center", paddingVertical: 10 }}>
+              <Text style={{ color: "#666", fontSize: 14 }}>Cancelar</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
 
       {/* MODAL FILTROS */}
       <Modal visible={showFilters} transparent animationType="slide">
@@ -435,6 +599,66 @@ const styles = StyleSheet.create({
   filterDot: {
     position: "absolute", top: 6, right: 6,
     width: 8, height: 8, borderRadius: 4, backgroundColor: "#22c55e",
+  },
+  passportBtn: { padding: 8, position: "relative" },
+  passportDot: {
+    position: "absolute", top: 6, right: 6,
+    width: 8, height: 8, borderRadius: 4, backgroundColor: "#a78bfa",
+  },
+  zoneBar: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 20,
+    paddingBottom: 8,
+    backgroundColor: "#000",
+    gap: 6,
+  },
+  zoneText: { color: "#888", fontSize: 12, flex: 1 },
+  zoneReset: { color: "#a78bfa", fontSize: 12, fontWeight: "600" },
+  passportSheet: {
+    backgroundColor: "#0f0f0f",
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    padding: 24,
+    paddingBottom: 36,
+    borderTopWidth: 1,
+    borderColor: "#1e1e1e",
+  },
+  passportInput: {
+    flex: 1,
+    backgroundColor: "#1a1a1a",
+    borderWidth: 1,
+    borderColor: "#a78bfa44",
+    borderRadius: 12,
+    color: "white",
+    fontSize: 16,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+  },
+  passportDetectBtn: {
+    backgroundColor: "#1a1a1a",
+    borderWidth: 1,
+    borderColor: "#a78bfa44",
+    borderRadius: 12,
+    width: 48,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  passportApplyBtn: {
+    backgroundColor: "#a78bfa",
+    paddingVertical: 14,
+    borderRadius: 12,
+    alignItems: "center",
+    marginBottom: 10,
+  },
+  passportResetBtn: {
+    backgroundColor: "#1a1a1a",
+    borderWidth: 1,
+    borderColor: "#333",
+    paddingVertical: 12,
+    borderRadius: 12,
+    alignItems: "center",
+    marginBottom: 8,
   },
   swipesBar: {
     padding: 12,

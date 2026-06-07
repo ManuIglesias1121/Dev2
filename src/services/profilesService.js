@@ -1,15 +1,44 @@
 import { supabase } from "./supabase";
 import { fakeProfiles } from "../data/fakeProfiles";
 
-export async function getTherianProfiles(currentUserId) {
+/**
+ * Trae el feed de swipe.
+ *
+ * Reglas de geografía (estilo Pasaporte de Tinder):
+ *  - Free: solo perfiles de SU MISMA ciudad (userCity). Si no tiene ciudad
+ *    asignada, devolvemos sin filtro (degradado para no dejar el feed vacío).
+ *  - Premium: por defecto también su ciudad, pero puede pasar `targetCity`
+ *    para "viajar" y ver perfiles de otra zona.
+ *
+ * Compatibilidad con llamadores viejos: si se pasa un string, lo tratamos como
+ * `currentUserId` y sin filtro de ciudad (modo legacy, sin pasaporte).
+ */
+export async function getTherianProfiles(opts) {
+  const params = typeof opts === "string" || opts == null
+    ? { currentUserId: opts, userCity: null, isPremium: false, targetCity: null }
+    : opts;
+
+  const { currentUserId, userCity, isPremium, targetCity } = params;
+
+  // Ciudad efectiva por la que filtrar el feed
+  const cityFilter = isPremium && targetCity
+    ? targetCity
+    : (!isPremium ? (userCity || null) : null);
+
   try {
     let query = supabase
       .from("profiles")
-      .select("id, display_name, biography, age, city, primary_theriotype, species_family, habitat, pack_role, avatar_url, is_premium, photos, exclusive_photos")
+      .select("id, display_name, biography, age, city, primary_theriotype, species_family, habitat, pack_role, avatar_url, is_premium, photos")
       .limit(50);
 
     if (currentUserId) {
       query = query.neq("id", currentUserId);
+    }
+
+    // Filtro por ciudad (case-insensitive, sin distinción de tildes triviales).
+    // Supabase no normaliza acentos en `ilike`, pero al menos cubre mayúsculas.
+    if (cityFilter) {
+      query = query.ilike("city", cityFilter);
     }
 
     const excludedIds = currentUserId ? await getExcludedProfileIds(currentUserId) : new Set();
@@ -17,12 +46,15 @@ export async function getTherianProfiles(currentUserId) {
     const { data, error } = await query;
 
     if (error || !data || data.length === 0) {
+      // Si filtramos por ciudad y no hay resultados, devolvemos vacío con
+      // bandera para que la UI pueda mostrar "no hay nadie cerca todavía".
+      // Si NO filtramos (free sin ciudad), caemos a fakeProfiles para no dejar el feed muerto.
+      if (cityFilter) return [];
       return fakeProfiles;
     }
 
     const visible = excludedIds.size ? data.filter((p) => !excludedIds.has(p.id)) : data;
 
-    // Mapear campos de Supabase al formato que usa la app
     const real = visible.map((p) => ({
       id: p.id,
       display_name: p.display_name || "Therian",
@@ -37,24 +69,20 @@ export async function getTherianProfiles(currentUserId) {
       pack_role: p.pack_role || "",
       avatar: p.avatar_url || (p.photos?.[0]) || null,
       photos: p.photos?.length ? p.photos : p.avatar_url ? [p.avatar_url] : [],
-      exclusive_photos: p.exclusive_photos || [],
       isPremium: p.is_premium || false,
       distance: Math.floor(Math.random() * 50) + 1,
       compatibility: Math.floor(Math.random() * 30) + 70,
     }));
 
-    // Mezclar perfiles reales con algunos falsos para que no quede vacío
+    // Si filtramos por ciudad, NO mezclamos fakeProfiles (rompería el filtro).
+    if (cityFilter) return real;
+
     return [...real, ...fakeProfiles.slice(0, 3)];
   } catch {
-    return fakeProfiles;
+    return cityFilter ? [] : fakeProfiles;
   }
 }
 
-// IDs de perfiles que NO deben aparecer en el feed de swipe:
-// - ya les di like (likes.liker_id = me)
-// - ya les mandé super match (super_matches.sender_id = me)
-// - los bloqueé yo o ellos a mí (user_blocks en cualquier dirección)
-// Los matches ya están cubiertos por likes (siempre existe el like previo).
 async function getExcludedProfileIds(currentUserId) {
   const excluded = new Set();
   try {

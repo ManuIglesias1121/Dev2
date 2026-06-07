@@ -50,7 +50,7 @@ export async function fetchConversations(userId) {
 
   const { data: profiles } = await supabase
     .from("profiles")
-    .select("id, display_name, avatar_url, photos, exclusive_photos, is_premium, primary_theriotype")
+    .select("id, display_name, avatar_url, photos, is_premium, primary_theriotype")
     .in("id", otherIds);
 
   // Último mensaje de cada conversación (para preview)
@@ -81,7 +81,6 @@ export async function fetchConversations(userId) {
       otherDisplayName: otherProfile?.display_name || "Therian",
       otherAvatar: otherProfile?.avatar_url || otherProfile?.photos?.[0] || null,
       otherPhotos: otherProfile?.photos || [],
-      otherExclusivePhotos: otherProfile?.exclusive_photos || [],
       otherIsPremium: otherProfile?.is_premium || false,
       otherTheriotype: otherProfile?.primary_theriotype || null,
       lastMessage: lastMessageByConv[c.id] || null,

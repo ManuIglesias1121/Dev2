@@ -23,7 +23,8 @@ const PLAN_DETAILS = {
   mensual: {
     name: "Cazador",
     icon: "🐺",
-    price: "$4.99/mes",
+    price: "$3/mes",
+    promo: "Precio promocional · pronto $5",
     color: "#22c55e",
     benefits: [
       "✓ 50 swipes/día",
@@ -38,7 +39,8 @@ const PLAN_DETAILS = {
   trimestral: {
     name: "Depredador",
     icon: "🐯",
-    price: "$11.99/trimestre",
+    price: "$3/trimestre",
+    promo: "Precio promocional · pronto $5",
     color: "#3b82f6",
     benefits: [
       "✓ Swipes ilimitados",
@@ -54,7 +56,8 @@ const PLAN_DETAILS = {
   anual: {
     name: "Alfa de la Manada",
     icon: "👑",
-    price: "$39.99/año",
+    price: "$3/año",
+    promo: "Precio promocional · pronto $5",
     color: "#a78bfa",
     benefits: [
       "✓ Todo lo anterior +",
@@ -86,6 +89,9 @@ function PlanCard({ planKey, plan, isCurrentPlan, purchasing, onPurchase }) {
         <Text style={styles.planIcon}>{plan.icon}</Text>
         <Text style={styles.planName}>{plan.name}</Text>
         <Text style={[styles.planPrice, { color: plan.color }]}>{plan.price}</Text>
+        {plan.promo && (
+          <Text style={styles.promoNote}>{plan.promo}</Text>
+        )}
 
         <View style={[styles.divider, { backgroundColor: plan.color + "44" }]} />
 
@@ -239,7 +245,8 @@ const styles = StyleSheet.create({
   badgeText: { color: "#000", fontSize: 10, fontWeight: "bold" },
   planIcon: { fontSize: 48, marginBottom: 8 },
   planName: { fontSize: 22, fontWeight: "bold", color: "#fff", marginBottom: 8 },
-  planPrice: { fontSize: 24, fontWeight: "bold", marginBottom: 12 },
+  planPrice: { fontSize: 24, fontWeight: "bold", marginBottom: 4 },
+  promoNote: { color: "#f59e0b", fontSize: 11, fontStyle: "italic", marginBottom: 12, textAlign: "center" },
   divider: { height: 1, width: "100%", marginBottom: 16 },
   benefitsList: { width: "100%", marginBottom: 16 },
   benefitItem: { color: "#ddd", fontSize: 13, marginBottom: 6, paddingLeft: 8 },

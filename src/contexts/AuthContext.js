@@ -144,7 +144,7 @@ const GIFT_FEATURES = {
   llama_romantica: {
     name: "Llamada Romántica",
     icon: "📞",
-    price: "$2.99",
+    price: "$1",
     color: "#ec4899",
     description: "Llamadas de voz especiales",
     features: ["voiceCall", "voiceMessages"],
@@ -153,7 +153,7 @@ const GIFT_FEATURES = {
   lluvia_flores: {
     name: "Lluvia de Flores",
     icon: "🌹",
-    price: "$1.99",
+    price: "$1",
     color: "#f43f5e",
     description: "Efectos románticos en mensajes",
     features: ["messageAnimation", "flowerEffects"],
@@ -164,7 +164,7 @@ const GIFT_FEATURES = {
   fuego_pasion: {
     name: "Fuego de Pasión",
     icon: "🔥",
-    price: "$3.99",
+    price: "$1",
     color: "#ff6b35",
     description: "Efectos especiales calientes",
     features: ["hotAnimation", "passionEmojis"],
@@ -173,7 +173,7 @@ const GIFT_FEATURES = {
   luna_magica: {
     name: "Luna Mágica",
     icon: "🌙",
-    price: "$2.49",
+    price: "$1",
     color: "#667eea",
     description: "Tema nocturno mágico",
     features: ["magicTheme", "glowEffect"],
@@ -182,7 +182,7 @@ const GIFT_FEATURES = {
   caos_animal: {
     name: "Caos Animal",
     icon: "🐾",
-    price: "$4.99",
+    price: "$1",
     color: "#22c55e",
     description: "Efectos salvajes y emojis dinámicos",
     features: ["animalReactions", "wildAnimations"],
@@ -191,7 +191,7 @@ const GIFT_FEATURES = {
   regalo_misterioso: {
     name: "Sorpresa Misteriosa",
     icon: "🎁",
-    price: "$9.99",
+    price: "$1",
     color: "#a78bfa",
     description: "Desbloquea sorpresas secretas",
     features: ["dailySurprise", "randomEffects", "secretMessages"],
@@ -202,7 +202,7 @@ const GIFT_FEATURES = {
   rosas_eternas: {
     name: "Rosas Eternas",
     icon: "🌹",
-    price: "$1.49",
+    price: "$1",
     color: "#f472b6",
     description: "Marcadores especiales en chat",
     features: ["favoriteMessages", "pinMessages"],
@@ -211,7 +211,7 @@ const GIFT_FEATURES = {
   baile_salvaje: {
     name: "Baile Salvaje",
     icon: "💃",
-    price: "$3.49",
+    price: "$1",
     color: "#fbbf24",
     description: "Emojis danzantes y movimiento",
     features: ["danceEmojis", "vibrationPattern"],
@@ -366,7 +366,6 @@ export function AuthProvider({ children }) {
       bio: profile.biography || "",
       isPremium: profile.is_premium || false,
       photos: profile.photos || [],
-      exclusive_photos: profile.exclusive_photos || [],
       swipesLeft: profile.is_premium ? 999 : 5,
       coins: profile.coins ?? 50,
       gifts: [],

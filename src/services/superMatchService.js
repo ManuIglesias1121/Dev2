@@ -59,7 +59,7 @@ export async function fetchReceivedSuperMatches(userId) {
   const senderIds = data.map((sm) => sm.sender_id);
   const { data: profiles } = await supabase
     .from("profiles")
-    .select("id, display_name, avatar_url, photos, exclusive_photos, is_premium, primary_theriotype")
+    .select("id, display_name, avatar_url, photos, is_premium, primary_theriotype")
     .in("id", senderIds);
 
   return data.map((sm) => {
@@ -71,7 +71,6 @@ export async function fetchReceivedSuperMatches(userId) {
         display_name: profile?.display_name || "Therian",
         avatar: profile?.avatar_url || profile?.photos?.[0] || null,
         photos: profile?.photos || [],
-        exclusive_photos: profile?.exclusive_photos || [],
         isPremium: profile?.is_premium || false,
         primary_theriotype: profile?.primary_theriotype || "Wolf",
       },

@@ -17,6 +17,8 @@ export const LEGAL_VERSIONS = {
 
 export const MIN_AGE = 18;
 
+// Helpers de cálculo de edad — se conservan por si la verificación reforzada
+// vuelve a habilitarse (DNI / face match) en el futuro.
 export function calculateAge(birthDateIso) {
   if (!birthDateIso) return null;
   const today = new Date();
@@ -34,20 +36,17 @@ export function isAdult(birthDateIso) {
 }
 
 /**
- * Guarda la verificación de edad en profiles.
- * birthDateIso: 'YYYY-MM-DD'
- * method: 'self_declared' | 'id_document' | 'face_match'
+ * Registra que el usuario confirmó por checkbox que es mayor de edad.
+ * No pide fecha de nacimiento — vale como autodeclaración con timestamp.
  */
-export async function recordAgeVerification(userId, birthDateIso, method = "self_declared") {
+export async function recordAgeConfirmation(userId) {
   if (!userId) throw new Error("userId requerido");
-  if (!isAdult(birthDateIso)) throw new Error("Usuario menor de edad");
 
   const { error } = await supabase
     .from("profiles")
     .update({
-      birth_date: birthDateIso,
       age_verified_at: new Date().toISOString(),
-      age_verification_method: method,
+      age_verification_method: "self_declared_checkbox",
     })
     .eq("id", userId);
 
@@ -57,7 +56,7 @@ export async function recordAgeVerification(userId, birthDateIso, method = "self
 
 /**
  * Registra los consentimientos del usuario en consent_log + actualiza profiles.
- * consents: { terms: bool, privacy: bool, community: bool, analytics: bool, marketing: bool }
+ * consents: { terms, privacy, community, analytics?, marketing? }
  *
  * Los tres primeros son obligatorios; si alguno es false, lanza error.
  */
@@ -79,14 +78,11 @@ export async function recordConsents(userId, consents, context = "signup") {
     app_version: appVersion,
     platform: Platform.OS,
     acceptance_context: context,
-    // ip_address y user_agent: el cliente RN no los conoce de forma fiable;
-    // si en el futuro hay una Edge Function, completarlos server-side.
   };
 
   const { error: logError } = await supabase.from("consent_log").insert(logRow);
   if (logError) throw logError;
 
-  // Snapshot de versiones aceptadas también en profiles para queries rápidas
   const { error: profileError } = await supabase
     .from("profiles")
     .update({
@@ -101,31 +97,51 @@ export async function recordConsents(userId, consents, context = "signup") {
 }
 
 /**
- * Persiste el consentimiento + fecha de nacimiento para aplicarlos al
- * primer login (útil cuando signUp requiere confirmación por email y
- * no hay sesión activa todavía, por lo que RLS bloquea los inserts).
+ * Persiste el consentimiento para aplicarlo al primer login
+ * (útil cuando signUp requiere confirmación por email y todavía no hay
+ * sesión activa: RLS bloquearía los inserts).
+ *
+ * Acepta { consents } u (legacy) { birthDateIso, consents }.
  */
-export async function savePendingLegal(birthDateIso, consents) {
+export async function savePendingLegal(payload) {
+  // Compat con la firma vieja: savePendingLegal(birthDateIso, consents)
+  if (typeof payload === "string" || payload == null) {
+    const birthDateIso = payload;
+    const consents = arguments[1] || null;
+    return saveData(PENDING_LEGAL_KEY, {
+      birthDateIso,
+      consents,
+      queuedAt: new Date().toISOString(),
+    });
+  }
   return saveData(PENDING_LEGAL_KEY, {
-    birthDateIso,
-    consents,
+    ...payload,
     queuedAt: new Date().toISOString(),
   });
 }
 
 /**
  * Si hay datos legales pendientes, los aplica al userId provisto.
- * No-op silencioso si no hay nada pendiente o si falla la escritura
- * (mejor login degradado que login bloqueado — el AuthContext puede
- * volver a intentar más adelante o forzar re-aceptación en la UI).
+ * No-op silencioso si no hay nada pendiente o si falla la escritura.
  */
 export async function applyPendingLegal(userId) {
   if (!userId) return false;
   const pending = await loadData(PENDING_LEGAL_KEY);
   if (!pending) return false;
   try {
+    // Si vino con birthDateIso del flujo viejo, lo usamos. Si no, registramos
+    // la confirmación por checkbox.
     if (pending.birthDateIso) {
-      await recordAgeVerification(userId, pending.birthDateIso, "self_declared");
+      await supabase
+        .from("profiles")
+        .update({
+          birth_date: pending.birthDateIso,
+          age_verified_at: new Date().toISOString(),
+          age_verification_method: "self_declared",
+        })
+        .eq("id", userId);
+    } else {
+      await recordAgeConfirmation(userId);
     }
     if (pending.consents) {
       await recordConsents(userId, pending.consents, "signup");

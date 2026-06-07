@@ -100,7 +100,6 @@ export default function ChatRoomPage() {
   const name = params.name ?? user?.chatContact?.name ?? "Luna Wolf";
   const photo = params.photo ?? user?.chatContact?.photo ?? AVATARS["loba-1"];
   const photos = params.photos ?? (photo ? [photo] : []);
-  const exclusivePhotos = params.exclusivePhotos ?? [];
   const otherIsPremium = params.otherIsPremium ?? false;
   const primaryTheriotype = params.primaryTheriotype ?? "Wolf";
   const contactId = params.contactId ?? "default";
@@ -534,7 +533,6 @@ export default function ChatRoomPage() {
                   display_name: name,
                   avatar: photo,
                   photos,
-                  exclusive_photos: exclusivePhotos,
                   isPremium: otherIsPremium,
                   primary_theriotype: primaryTheriotype,
                 },

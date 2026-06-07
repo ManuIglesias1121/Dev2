@@ -134,7 +134,6 @@ export default function ChatListPage() {
                 photos: conv.otherPhotos?.length
                   ? conv.otherPhotos
                   : (conv.otherAvatar ? [conv.otherAvatar] : []),
-                exclusivePhotos: conv.otherExclusivePhotos || [],
                 otherIsPremium: conv.otherIsPremium,
                 primaryTheriotype: conv.otherTheriotype,
                 contactId: conv.id,

@@ -88,7 +88,7 @@ export async function fetchMatches(userId) {
   const otherIds = data.map((m) => (m.user_a_id === userId ? m.user_b_id : m.user_a_id));
   const { data: profiles } = await supabase
     .from("profiles")
-    .select("id, display_name, avatar_url, photos, exclusive_photos, is_premium, primary_theriotype, city, age")
+    .select("id, display_name, avatar_url, photos, is_premium, primary_theriotype, city, age")
     .in("id", otherIds);
 
   return data.map((m) => {
@@ -102,7 +102,6 @@ export async function fetchMatches(userId) {
         display_name: profile?.display_name || "Therian",
         avatar: profile?.avatar_url || profile?.photos?.[0] || null,
         photos: profile?.photos || [],
-        exclusive_photos: profile?.exclusive_photos || [],
         isPremium: profile?.is_premium || false,
         primary_theriotype: profile?.primary_theriotype || "Wolf",
         city: profile?.city || null,
